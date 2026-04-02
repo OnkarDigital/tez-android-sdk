@@ -1,7 +1,28 @@
 // TezGateway Android SDK — Module build.gradle
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0'
+    }
+}
+
+// Ensure repositories for the module
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    id 'maven-publish'
 }
 
 android {
@@ -30,6 +51,13 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+
+    // Required for JitPack to generate sources
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 dependencies {
@@ -45,4 +73,18 @@ dependencies {
 
     // Core AndroidX
     implementation 'androidx.core:core-ktx:1.12.0'
+}
+
+// JitPack Maven Publication configuration
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.github.OnkarDigital'
+                artifactId = 'tez-android-sdk'
+                version = project.version // Automatically uses the Git tag version
+            }
+        }
+    }
 }
