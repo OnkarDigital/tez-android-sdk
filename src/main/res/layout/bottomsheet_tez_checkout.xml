@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TezGateway SDK - Native Payment BottomSheet Layout
+    Header color is applied programmatically from merchant's CheckoutSettings.headerColor
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white">
+
+    <!-- ── HEADER BAR (color set dynamically from settings.headerColor) ── -->
+    <LinearLayout
+        android:id="@+id/tez_header_bar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="16dp"
+        android:background="#c800b2">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="💳 Select Payment Method"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- Powered by badge (hidden if remove_branding = true) -->
+        <TextView
+            android:id="@+id/tez_branding_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TEZ"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:alpha="0.7" />
+    </LinearLayout>
+
+    <!-- ── MAIN CONTENT ── -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Amount displayed (set programmatically) -->
+            <TextView
+                android:id="@+id/tez_amount_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="#1a1a1a"
+                android:layout_marginBottom="4dp"
+                tools:text="₹500.00" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Choose a payment method"
+                android:textSize="13sp"
+                android:textColor="#888888"
+                android:layout_marginBottom="20dp" />
+
+            <!-- ── UPI APP BUTTONS GRID ── -->
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="3"
+                android:useDefaultMargins="true"
+                android:layout_marginBottom="8dp">
+
+                <!-- Google Pay -->
+                <Button
+                    android:id="@+id/btn_gpay"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:text="Google Pay"
+                    android:textSize="12sp"
+                    android:backgroundTint="#1a73e8"
+                    android:textColor="#FFFFFF"
+                    android:drawableTop="@drawable/ic_gpay"
+                    android:visibility="gone"
+                    android:cornerRadius="12dp" />
+
+                <!-- PhonePe -->
+                <Button
+                    android:id="@+id/btn_phonepe"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:text="PhonePe"
+                    android:textSize="12sp"
+                    android:backgroundTint="#5f259f"
+                    android:textColor="#FFFFFF"
+                    android:drawableTop="@drawable/ic_phonepe"
+                    android:visibility="gone"
+                    android:cornerRadius="12dp" />
+
+                <!-- Paytm -->
+                <Button
+                    android:id="@+id/btn_paytm"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:text="Paytm"
+                    android:textSize="12sp"
+                    android:backgroundTint="#00BAF2"
+                    android:textColor="#FFFFFF"
+                    android:drawableTop="@drawable/ic_paytm"
+                    android:visibility="gone"
+                    android:cornerRadius="12dp" />
+
+                <!-- BHIM UPI -->
+                <Button
+                    android:id="@+id/btn_bhim"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:text="BHIM UPI"
+                    android:textSize="12sp"
+                    android:backgroundTint="#00529a"
+                    android:textColor="#FFFFFF"
+                    android:visibility="gone"
+                    android:cornerRadius="12dp" />
+
+                <!-- Amazon Pay -->
+                <Button
+                    android:id="@+id/btn_amazonpay"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:text="Amazon Pay"
+                    android:textSize="12sp"
+                    android:backgroundTint="#FF9900"
+                    android:textColor="#FFFFFF"
+                    android:visibility="gone"
+                    android:cornerRadius="12dp" />
+
+                <!-- CRED -->
+                <Button
+                    android:id="@+id/btn_cred"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:text="CRED"
+                    android:textSize="12sp"
+                    android:backgroundTint="#1c1c1e"
+                    android:textColor="#FFFFFF"
+                    android:visibility="gone"
+                    android:cornerRadius="12dp" />
+            </GridLayout>
+
+            <!-- ── DIVIDER ── -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#f0f0f0"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp" />
+
+            <!-- ── QR CODE SECTION (shown if settings.show_qr = true) ── -->
+            <LinearLayout
+                android:id="@+id/tez_qr_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📷 Scan QR to Pay"
+                    android:textSize="14sp"
+                    android:textColor="#444444"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- QR image — set programmatically from base64 qr_image -->
+                <ImageView
+                    android:id="@+id/tez_qr_image"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:scaleType="fitCenter"
+                    android:background="#f9f9f9"
+                    android:padding="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Open any UPI app and scan this QR"
+                    android:textSize="12sp"
+                    android:textColor="#888888"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <!-- ── CANCEL BUTTON ── -->
+            <Button
+                android:id="@+id/btn_cancel"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="16dp"
+                android:text="Cancel Payment"
+                android:textColor="#ef4444"
+                android:backgroundTint="#fff0f0"
+                android:cornerRadius="10dp"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ── NEWS TICKER (shown only if settings.news is not blank) ── -->
+    <TextView
+        android:id="@+id/tez_news_ticker"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:background="#fff3cd"
+        android:textColor="#856404"
+        android:textSize="12sp"
+        android:singleLine="true"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:visibility="gone"
+        tools:text="📢 Important: Do not press back while payment is processing." />
+
+</LinearLayout>

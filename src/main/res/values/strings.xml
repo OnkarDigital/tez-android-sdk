@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TezGateway SDK</string>
+    <string name="tez_pay_title">Select Payment Method</string>
+    <string name="tez_cancel">Cancel Payment</string>
+    <string name="tez_scan_qr">Scan QR to Pay</string>
+    <string name="tez_powered_by">Powered by TezGateway</string>
+</resources>

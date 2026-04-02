@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.tezgateway.sdk">
+
+    <!-- Required permissions for SDK -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Declare UPI apps so Intent queries work on Android 11+ (API 30+) -->
+    <queries>
+        <!-- Google Pay -->
+        <package android:name="com.google.android.apps.nbu.paisa.user" />
+        <!-- PhonePe -->
+        <package android:name="com.phonepe.app" />
+        <!-- Paytm -->
+        <package android:name="net.one97.paytm" />
+        <!-- BHIM -->
+        <package android:name="in.org.npci.upiapp" />
+        <!-- Amazon Pay -->
+        <package android:name="in.amazon.mShop.android.shopping" />
+        <!-- CRED -->
+        <package android:name="com.dreamplug.androidapp" />
+    </queries>
+
+    <application>
+        <!-- TezCheckoutBottomSheet (library Activity-like fragment host) -->
+    </application>
+</manifest>
