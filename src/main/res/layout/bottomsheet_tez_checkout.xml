@@ -5,6 +5,7 @@
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -95,7 +96,7 @@
                     android:textColor="#FFFFFF"
                     android:drawableTop="@drawable/ic_gpay"
                     android:visibility="gone"
-                    android:cornerRadius="12dp" />
+                    app:cornerRadius="12dp" />
 
                 <!-- PhonePe -->
                 <Button
@@ -110,7 +111,7 @@
                     android:textColor="#FFFFFF"
                     android:drawableTop="@drawable/ic_phonepe"
                     android:visibility="gone"
-                    android:cornerRadius="12dp" />
+                    app:cornerRadius="12dp" />
 
                 <!-- Paytm -->
                 <Button
@@ -125,7 +126,7 @@
                     android:textColor="#FFFFFF"
                     android:drawableTop="@drawable/ic_paytm"
                     android:visibility="gone"
-                    android:cornerRadius="12dp" />
+                    app:cornerRadius="12dp" />
 
                 <!-- BHIM UPI -->
                 <Button
@@ -139,7 +140,7 @@
                     android:backgroundTint="#00529a"
                     android:textColor="#FFFFFF"
                     android:visibility="gone"
-                    android:cornerRadius="12dp" />
+                    app:cornerRadius="12dp" />
 
                 <!-- Amazon Pay -->
                 <Button
@@ -153,7 +154,7 @@
                     android:backgroundTint="#FF9900"
                     android:textColor="#FFFFFF"
                     android:visibility="gone"
-                    android:cornerRadius="12dp" />
+                    app:cornerRadius="12dp" />
 
                 <!-- CRED -->
                 <Button
@@ -167,7 +168,7 @@
                     android:backgroundTint="#1c1c1e"
                     android:textColor="#FFFFFF"
                     android:visibility="gone"
-                    android:cornerRadius="12dp" />
+                    app:cornerRadius="12dp" />
             </GridLayout>
 
             <!-- ── DIVIDER ── -->
@@ -224,7 +225,7 @@
                 android:text="Cancel Payment"
                 android:textColor="#ef4444"
                 android:backgroundTint="#fff0f0"
-                android:cornerRadius="10dp"
+                app:cornerRadius="10dp"
                 android:textSize="14sp" />
         </LinearLayout>
     </ScrollView>
