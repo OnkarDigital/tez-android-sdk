@@ -19,7 +19,7 @@ A native Android SDK for integrating TezGateway UPI payment gateway — **no Web
 
 ```gradle
 dependencies {
-    implementation 'com.tezgateway:android-sdk:1.0.0'
+    implementation 'com.github.OnkarDigital:tez-android-sdk:1.0.5'
 }
 ```
 
@@ -88,6 +88,7 @@ If you run TezGateway on a custom domain:
 
 ```kotlin
 // Call once in Application.onCreate()
+// Note: SDK is fully compatible with both the legacy PHP panel and the new Laravel panel!
 TezGateway.configure("https://your-custom-domain.com")
 ```
 
@@ -179,4 +180,4 @@ Configure your Webhook URL in the TezGateway merchant panel. When a payment sett
 
 ---
 
-*TezGateway Android SDK · v1.0.0*
+*TezGateway Android SDK · v1.0.5*
