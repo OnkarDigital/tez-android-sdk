@@ -3,276 +3,387 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TezGateway SDK — UI Preview</title>
+<title>TezGateway SDK — UI Preview v1.0.8</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ════════ RESET ════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-  body {
-    background: #0f0f1a;
-    min-height: 100vh;
-    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-    color: #fff;
-    padding: 60px 20px 60px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 40px;
-  }
+/* ════════ PAGE ════════ */
+body {
+  background: #0a0a14;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #fff;
+  padding: 56px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
 
-  /* ── Page header ── */
-  .page-header { text-align: center; }
-  .page-header h1 { font-size: 20px; font-weight: 700; color: #e879f9; letter-spacing: 0.5px; }
-  .page-header p  { font-size: 12px; color: #555; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+/* ════════ PAGE HEADER ════════ */
+.page-header { text-align: center; }
+.page-header h1 {
+  font-size: 22px; font-weight: 800; letter-spacing: 0.3px;
+  background: linear-gradient(90deg,#e879f9,#a855f7);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.page-header p { font-size: 11px; color: #444; margin-top: 6px; letter-spacing: 1.5px; text-transform: uppercase; }
 
-  /* ── Phones row ── */
-  .phones-row {
-    display: flex; flex-wrap: wrap; gap: 32px;
-    justify-content: center; align-items: flex-end;
-  }
+/* ════════ ROW LABEL ════════ */
+.row-label {
+  width: 100%; max-width: 1200px;
+  font-size: 10px; color: #444; letter-spacing: 2px; text-transform: uppercase;
+  border-bottom: 1px solid #1a1a2e; padding-bottom: 8px;
+  align-self: center;
+}
 
-  /* ── Phone frame ── */
-  .phone-frame {
-    width: 360px; background: #111;
-    border-radius: 44px; border: 6px solid #2a2a2a;
-    box-shadow: 0 40px 100px rgba(0,0,0,.8), 0 0 0 1px #333;
-    overflow: hidden; display: flex; flex-direction: column;
-    justify-content: flex-end; min-height: 660px; position: relative;
-  }
-  .phone-frame.small { width: 280px; min-height: 500px; }
+/* ════════ PHONES ROW ════════ */
+.phones-row {
+  display: flex; flex-wrap: wrap; gap: 28px;
+  justify-content: center; align-items: flex-end;
+}
 
-  .phone-notch {
-    position: absolute; top: 0; left: 0; right: 0; height: 30px;
-    background: #111; display: flex; align-items: center; justify-content: center; z-index: 10;
-  }
-  .phone-notch::after {
-    content: ''; width: 70px; height: 14px;
-    background: #000; border-radius: 0 0 10px 10px;
-  }
+/* ════════ PHONE FRAME ════════ */
+.phone {
+  width: 360px;
+  background: #0d0d0d;
+  border-radius: 46px;
+  border: 6px solid #252525;
+  box-shadow:
+    0 0 0 1px #333,
+    0 40px 80px rgba(0,0,0,.85),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  justify-content: flex-end;
+  min-height: 700px;
+  position: relative;
+}
+.phone.sm { width: 290px; min-height: 520px; }
 
-  .phone-screen-bg {
-    flex: 1;
-    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-    display: flex; align-items: center; justify-content: center;
-    padding-top: 30px; min-height: 140px;
-  }
-  .phone-screen-bg span { color: rgba(255,255,255,.18); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+/* Status bar */
+.status-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 28px;
+  background: #0d0d0d;
+  display: flex; align-items: center; justify-content: center; z-index: 10;
+}
+.status-bar::after {
+  content: ''; width: 72px; height: 13px;
+  background: #000; border-radius: 0 0 10px 10px;
+}
 
-  .dim-overlay { background: rgba(0,0,0,.55); height: 50px; }
+/* App screen behind sheet */
+.app-screen {
+  flex: 1;
+  background: linear-gradient(145deg, #0f0c29 0%, #23183e 50%, #1a1a3a 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding-top: 28px; min-height: 150px; gap: 10px;
+}
+.app-screen .app-name {
+  color: rgba(255,255,255,.14); font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+}
+.app-screen .app-logo {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(255,255,255,.05);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
 
-  /* ── Bottom Sheet ── */
-  .bottom-sheet { background: #fff; overflow: hidden; width: 100%; }
+/* Scrim */
+.scrim { background: rgba(0,0,0,.6); height: 46px; }
 
-  .drag-handle {
-    width: 40px; height: 4px; background: #e0e0e0;
-    border-radius: 2px; margin: 10px auto 6px; display: block;
-  }
+/* ════════ BOTTOM SHEET ════════ */
+.sheet { background: #FAFAFA; overflow: hidden; width: 100%; }
 
-  /* Header */
-  .header-bar {
-    height: 64px; display: flex; align-items: center;
-    padding: 0 16px 0 20px; gap: 12px;
-  }
-  .header-titles { flex: 1; }
-  .header-main { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: .2px; }
-  .header-sub  { color: rgba(255,255,255,.6); font-size: 10px; margin-top: 2px; letter-spacing: .5px; }
-  .branding-badge { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-  .branding-badge .powered { color: rgba(255,255,255,.55); font-size: 8px; }
-  .branding-badge .branding-logo { height: 20px; width: auto; object-fit: contain; opacity: 0.88; filter: brightness(0) invert(1); }
+/* Drag handle */
+.handle {
+  width: 44px; height: 4px; background: #DDDDDD;
+  border-radius: 2px; margin: 10px auto 4px; display: block;
+}
 
-  /* Body */
-  .sheet-body { padding: 18px; background: #fff; }
+/* ── HEADER ── */
+.hdr {
+  height: 68px; display: flex; align-items: center;
+  padding: 0 14px 0 18px; gap: 10px;
+}
+.hdr-lock { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.hdr-text { flex: 1; }
+.hdr-title { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .1px; }
+.hdr-sub   { color: rgba(255,255,255,.58); font-size: 10px; margin-top: 2px; letter-spacing: .4px; }
 
-  .amount-label { text-align: center; font-size: 28px; font-weight: 700; color: #111; margin-bottom: 3px; }
-  .amount-sub   { text-align: center; font-size: 13px; color: #888; margin-bottom: 20px; }
+.branding { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; }
+.branding .pw { color: rgba(255,255,255,.5); font-size: 8px; }
+.branding img { height: 20px; width: auto; object-fit: contain; opacity: .88; filter: brightness(0) invert(1); }
 
-  /* UPI grid */
-  .upi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 4px; }
-  .upi-btn {
-    border: none; border-radius: 14px; height: 72px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 5px; cursor: pointer; font-size: 11px; font-weight: 600; color: #fff;
-    transition: transform .1s, filter .1s;
-  }
-  .upi-btn:hover  { filter: brightness(1.08); transform: translateY(-1px); }
-  .upi-btn:active { transform: scale(.96); }
-  .upi-btn img { width: 24px; height: 24px; border-radius: 4px; }
+/* ── BODY ── */
+.body { padding: 16px 16px 10px; background: #FAFAFA; }
 
-  .btn-gpay    { background: #1a73e8; }
-  .btn-phonepe { background: #5f259f; }
-  .btn-paytm   { background: #00BAF2; }
-  .btn-bhim    { background: #00529a; }
-  .btn-amazon  { background: #FF9900; }
-  .btn-cred    { background: #1c1c1e; }
+/* Amount card */
+.amount-card {
+  background: #F9F0FF;
+  border: 1px solid #EDD6FF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  text-align: center;
+  margin-bottom: 18px;
+}
+.amount-card .lbl { font-size: 10px; color: #9E00A0; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 4px; }
+.amount-card .val { font-size: 32px; font-weight: 800; color: #1a1a1a; letter-spacing: -.5px; }
 
-  /* Divider + QR */
-  .divider { height: 1px; background: #f0f0f0; margin: 14px 0; }
-  .qr-section { display: flex; flex-direction: column; align-items: center; padding: 4px 0 10px; }
-  .qr-label { font-size: 13px; font-weight: 700; color: #444; margin-bottom: 12px; }
-  .qr-box {
-    width: 160px; height: 160px; background: #f8f8f8;
-    border: 1px solid #eee; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center; padding: 10px;
-  }
-  .qr-box svg { width: 100%; height: 100%; }
-  .qr-hint { font-size: 11px; color: #999; margin-top: 8px; text-align: center; }
+/* Section header */
+.sec-hdr { font-size: 10px; color: #BBBBBB; letter-spacing: 1px; margin-bottom: 10px; }
 
-  /* Buttons */
-  .cancel-btn {
-    width: 100%; height: 48px; border: none; border-radius: 12px;
-    background: #fff0f0; color: #ef4444; font-size: 14px;
-    font-weight: 600; cursor: pointer; margin-top: 10px; transition: background .15s;
-  }
-  .cancel-btn:hover { background: #fee2e2; }
+/* UPI grid */
+.upi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 6px; }
+.upi-btn {
+  border: none; border-radius: 14px; height: 72px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; cursor: pointer; font-size: 11px; font-weight: 600; color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  transition: transform .12s, filter .12s;
+}
+.upi-btn:hover  { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+.upi-btn:active { transform: scale(.95); }
+.upi-btn img    { width: 24px; height: 24px; border-radius: 5px; }
 
-  /* ── Status Checking Section ── */
-  .checking-section {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 20px 0 8px;
-  }
+.g  { background: #1a73e8; }
+.ph { background: #5f259f; }
+.pt { background: #00BAF2; }
+.bh { background: #00529a; }
+.am { background: #FF9900; }
+.cr { background: #1c1c1e; }
 
-  /* Spinner wrap — ring + logo stacked */
-  .spinner-wrap {
-    position: relative; width: 72px; height: 72px; margin-bottom: 18px;
-  }
-  .spinner {
-    position: absolute; top: 0; left: 0;
-    width: 72px; height: 72px; border: 5px solid #f0f0f0;
-    border-top-color: #c800b2; border-radius: 50%;
-    animation: spin .9s linear infinite;
-  }
-  .spinner-logo {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 34px; height: 34px;
-    object-fit: contain; border-radius: 50%;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* OR divider */
+.or-row {
+  display: flex; align-items: center; margin: 14px 0;
+}
+.or-row::before, .or-row::after {
+  content: ''; flex: 1; height: 1px; background: #E8E8E8;
+}
+.or-row span {
+  font-size: 10px; color: #BBBBBB; padding: 0 10px;
+  letter-spacing: 1px; white-space: nowrap;
+}
 
-  .checking-title { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; text-align: center; }
-  .checking-timer { font-size: 13px; color: #888; margin-bottom: 20px; text-align: center; }
+/* QR card */
+.qr-card {
+  background: #FFFFFF;
+  border: 1px solid #EEEEEE;
+  border-radius: 18px;
+  padding: 18px;
+  display: flex; flex-direction: column; align-items: center;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+}
+.qr-img-wrap {
+  width: 168px; height: 168px;
+  background: #fff; padding: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.qr-img-wrap svg { width: 100%; height: 100%; }
+.qr-hint { font-size: 11px; color: #AAAAAA; text-align: center; margin: 10px 0 14px; line-height: 1.5; }
 
-  /* Result card */
-  .result-card {
-    width: 100%; border-radius: 16px; border: 1px solid #eee;
-    padding: 20px; text-align: center; margin-bottom: 14px;
-  }
-  .result-card.success { background: #e8f5e9; }
-  .result-card.fail    { background: #ffebee; }
-  .result-card.pending { background: #fff8e1; }
+/* "I've Paid" button */
+.qr-paid-btn {
+  width: 100%; height: 48px;
+  background: #c800b2; color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  letter-spacing: .2px;
+  box-shadow: 0 4px 14px rgba(200,0,178,.35);
+  transition: filter .15s, transform .1s;
+}
+.qr-paid-btn:hover  { filter: brightness(1.1); transform: translateY(-1px); }
+.qr-paid-btn:active { transform: scale(.97); }
 
-  .result-icon { font-size: 44px; margin-bottom: 8px; display: block; }
-  .result-card-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-  .result-card.success .result-card-title { color: #2e7d32; }
-  .result-card.fail    .result-card-title { color: #c62828; }
-  .result-card.pending .result-card-title { color: #e65100; }
-  .result-card-sub { font-size: 12px; color: #666; line-height: 1.5; }
+/* Cancel button */
+.cancel-btn {
+  width: 100%; height: 48px; border: none; border-radius: 12px;
+  background: #FFF0F0; color: #EF4444; font-size: 14px;
+  font-weight: 600; cursor: pointer; margin-top: 8px;
+  transition: background .15s;
+}
+.cancel-btn:hover { background: #fee2e2; }
+.cancel-btn.later { background: #F5F5F5; color: #888; }
+.cancel-btn.close { background: #F5F5F5; color: #444; }
 
-  /* Check Status Now (outlined) */
-  .check-btn {
-    width: 100%; height: 48px; border-radius: 12px;
-    border: 1.5px solid #c800b2; background: transparent;
-    color: #c800b2; font-size: 14px; font-weight: 600;
-    cursor: pointer; margin-bottom: 8px; transition: background .15s;
-  }
-  .check-btn:hover { background: rgba(200,0,178,.06); }
+/* ── CHECKING SECTION ── */
+.checking {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 0 8px;
+}
+.spinner-wrap {
+  position: relative; width: 80px; height: 80px; margin-bottom: 20px;
+}
+.ring {
+  position: absolute; inset: 0;
+  border: 5px solid #F0F0F0; border-top-color: #c800b2;
+  border-radius: 50%; animation: spin .9s linear infinite;
+}
+.ring-logo {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 38px; height: 38px; object-fit: contain; border-radius: 50%;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  /* News ticker */
-  .news-ticker {
-    background: #fff8e1; color: #795548; font-size: 12px;
-    height: 36px; display: flex; align-items: center;
-    overflow: hidden; padding: 0 14px;
-  }
-  .news-ticker span { white-space: nowrap; animation: marquee 14s linear infinite; display: inline-block; }
-  @keyframes marquee { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+.chk-title { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; text-align: center; }
+.chk-timer { font-size: 13px; color: #BBBBBB; margin-bottom: 24px; text-align: center; }
 
-  /* Section label */
-  .section-label {
-    color: #555; font-size: 10px; text-align: center;
-    padding: 6px 10px; background: #1a1a2e;
-    border-top: 1px solid #2a2a3e;
-    letter-spacing: 1.5px; text-transform: uppercase;
-  }
+/* Check now button */
+.check-now-btn {
+  width: 100%; height: 48px; border-radius: 12px;
+  border: 1.5px solid #c800b2; background: transparent;
+  color: #c800b2; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-bottom: 8px;
+  transition: background .15s;
+}
+.check-now-btn:hover { background: rgba(200,0,178,.06); }
 
-  /* Legend */
-  .legend {
-    max-width: 740px; width: 100%;
-    background: #13131f; border-radius: 16px;
-    padding: 20px 24px; border: 1px solid #222;
-  }
-  .legend h3 { font-size: 12px; color: #e879f9; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
-  .legend table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .legend td { padding: 5px 8px; color: #aaa; border-bottom: 1px solid #1e1e2e; }
-  .legend td:first-child { color: #fff; font-weight: 600; width: 220px; white-space: nowrap; }
-  .legend tr:last-child td { border-bottom: none; }
+/* ── RESULT CARD ── */
+.result {
+  width: 100%; border-radius: 18px;
+  padding: 24px 20px; text-align: center; margin-bottom: 16px;
+  border: 1px solid #eee;
+}
+.result.ok  { background: #E8F5E9; }
+.result.err { background: #FFEBEE; }
+.result.pnd { background: #FFF8E1; }
+
+.r-icon  { font-size: 52px; display: block; margin-bottom: 10px; }
+.r-title { font-size: 19px; font-weight: 800; margin-bottom: 6px; }
+.result.ok  .r-title { color: #2E7D32; }
+.result.err .r-title { color: #C62828; }
+.result.pnd .r-title { color: #E65100; }
+.r-sub { font-size: 12px; color: #666; line-height: 1.6; }
+
+/* ── NEWS TICKER ── */
+.ticker {
+  background: #FFF8E1; color: #795548; font-size: 12px;
+  height: 36px; display: flex; align-items: center;
+  overflow: hidden; padding: 0 14px;
+}
+.ticker span { white-space: nowrap; animation: mq 16s linear infinite; display: inline-block; }
+@keyframes mq { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+
+/* ── PHONE LABEL ── */
+.phone-lbl {
+  font-size: 10px; color: #555; text-align: center;
+  padding: 6px 10px; background: #111;
+  border-top: 1px solid #222; letter-spacing: 1.5px; text-transform: uppercase;
+}
+
+/* ════════ LEGEND ════════ */
+.legend {
+  max-width: 760px; width: 100%;
+  background: #0e0e1a; border-radius: 18px;
+  padding: 22px 26px; border: 1px solid #1e1e30;
+}
+.legend h3 {
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  background: linear-gradient(90deg,#e879f9,#a855f7);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.legend table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.legend td { padding: 6px 8px; color: #888; border-bottom: 1px solid #161628; vertical-align: top; }
+.legend td:first-child { color: #ddd; font-weight: 600; width: 240px; white-space: nowrap; }
+.legend tr:last-child td { border-bottom: none; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .5px;
+}
+.badge.fix  { background: #1a3a1a; color: #4ade80; }
+.badge.new  { background: #1a1a3a; color: #818cf8; }
+
+/* ── SVG QR helper ── */
+.qr-svg { image-rendering: pixelated; width: 100%; height: 100%; }
 </style>
 </head>
 <body>
 
+<!-- ════════ PAGE HEADER ════════ -->
 <div class="page-header">
   <h1>TezGateway Android SDK</h1>
-  <p>Native BottomSheet UI Preview — v1.0.6</p>
+  <p>Native BottomSheet Preview &nbsp;·&nbsp; v1.0.8</p>
 </div>
 
-<!-- ════════════ PHONES ROW 1 ════════════ -->
+
+<!-- ════════════════════════════════
+     ROW 1 — Payment Selection States
+════════════════════════════════ -->
+<div class="row-label">Payment Selection States</div>
 <div class="phones-row">
 
-  <!-- Phone 1: Payment Selection -->
-  <div class="phone-frame">
-    <div class="phone-notch"></div>
-    <div class="phone-screen-bg"><span>Merchant App</span></div>
-    <div class="dim-overlay"></div>
+  <!-- ── Phone 1: UPI Buttons + QR (full payment screen) ── -->
+  <div class="phone">
+    <div class="status-bar"></div>
+    <div class="app-screen">
+      <div class="app-logo">🛒</div>
+      <div class="app-name">Merchant App</div>
+    </div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <span class="handle"></span>
 
-    <div class="bottom-sheet">
-      <span class="drag-handle"></span>
-
-      <div class="header-bar" style="background:#c800b2">
-        <div class="header-titles">
-          <div class="header-main">Complete Your Payment</div>
-          <div class="header-sub">Secure  ·  Fast  ·  Native UPI</div>
+      <div class="hdr" style="background:#c800b2">
+        <span class="hdr-lock">🔒</span>
+        <div class="hdr-text">
+          <div class="hdr-title">Complete Your Payment</div>
+          <div class="hdr-sub">100% Secure &nbsp;·&nbsp; Native UPI</div>
         </div>
-        <div class="branding-badge">
-          <div class="powered">Powered by</div>
-          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
+        <div class="branding">
+          <span class="pw">Powered by</span>
+          <img src="https://tezgateway.com/logo.png" alt="TezGateway">
         </div>
       </div>
 
-      <div class="sheet-body">
-        <div class="amount-label">&#8377;500.00</div>
-        <div class="amount-sub">Select a payment method below</div>
+      <div class="body">
+        <!-- Amount card -->
+        <div class="amount-card">
+          <div class="lbl">Amount to Pay</div>
+          <div class="val">&#8377;500.00</div>
+        </div>
 
+        <!-- Section label -->
+        <div class="sec-hdr">PAY VIA UPI APP</div>
+
+        <!-- UPI grid -->
         <div class="upi-grid">
-          <button class="upi-btn btn-gpay">
-            <img src="src/main/res/drawable/ic_gpay.png" alt="G" onerror="this.style.display='none'">
+          <button class="upi-btn g">
+            <img src="src/main/res/drawable/ic_gpay.png" alt="" onerror="this.style.display='none'">
             Google Pay
           </button>
-          <button class="upi-btn btn-phonepe">
-            <img src="src/main/res/drawable/ic_phonepe.png" alt="P" onerror="this.style.display='none'">
+          <button class="upi-btn ph">
+            <img src="src/main/res/drawable/ic_phonepe.png" alt="" onerror="this.style.display='none'">
             PhonePe
           </button>
-          <button class="upi-btn btn-paytm">
-            <img src="src/main/res/drawable/ic_paytm.png" alt="P" onerror="this.style.display='none'">
+          <button class="upi-btn pt">
+            <img src="src/main/res/drawable/ic_paytm.png" alt="" onerror="this.style.display='none'">
             Paytm
           </button>
-          <button class="upi-btn btn-bhim">
-            <img src="src/main/res/drawable/ic_bhim.png" alt="B" onerror="this.style.display='none'">
+          <button class="upi-btn bh">
+            <img src="src/main/res/drawable/ic_bhim.png" alt="" onerror="this.style.display='none'">
             BHIM UPI
           </button>
-          <button class="upi-btn btn-amazon">
-            <img src="src/main/res/drawable/ic_amazonpay.png" alt="A" onerror="this.style.display='none'">
+          <button class="upi-btn am">
+            <img src="src/main/res/drawable/ic_amazonpay.png" alt="" onerror="this.style.display='none'">
             Amazon Pay
           </button>
-          <button class="upi-btn btn-cred">
-            <img src="src/main/res/drawable/ic_cred.png" alt="C" onerror="this.style.display='none'">
+          <button class="upi-btn cr">
+            <img src="src/main/res/drawable/ic_cred.png" alt="" onerror="this.style.display='none'">
             CRED
           </button>
         </div>
 
-        <div class="divider"></div>
+        <!-- OR Scan QR divider -->
+        <div class="or-row"><span>OR SCAN QR</span></div>
 
-        <div class="qr-section">
-          <div class="qr-label">Or scan QR to pay</div>
-          <div class="qr-box">
-            <svg viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+        <!-- QR card -->
+        <div class="qr-card">
+          <div class="qr-img-wrap">
+            <svg class="qr-svg" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
               <rect width="21" height="21" fill="white"/>
               <rect x="1" y="1" width="7" height="7" fill="black"/><rect x="2" y="2" width="5" height="5" fill="white"/><rect x="3" y="3" width="3" height="3" fill="black"/>
               <rect x="13" y="1" width="7" height="7" fill="black"/><rect x="14" y="2" width="5" height="5" fill="white"/><rect x="15" y="3" width="3" height="3" fill="black"/>
@@ -289,209 +400,274 @@
               <rect x="17" y="11" width="3" height="1" fill="black"/>
             </svg>
           </div>
-          <div class="qr-hint">Open any UPI app and scan this QR code</div>
+          <div class="qr-hint">Open any UPI app &amp; scan this QR code</div>
+          <button class="qr-paid-btn">I've Paid — Check Status</button>
         </div>
 
         <button class="cancel-btn">Cancel Payment</button>
       </div>
 
-      <div class="news-ticker">
-        <span>Important: Do not press back while payment is processing. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Important: Do not press back while payment is processing.</span>
+      <div class="ticker">
+        <span>Important: Do not press back while payment is processing. &nbsp;&nbsp;&nbsp;&nbsp; Important: Do not press back while payment is processing.</span>
       </div>
     </div>
-    <div class="section-label">State 1 — Payment Selection</div>
+    <div class="phone-lbl">State 1 — Payment Selection + QR</div>
   </div>
 
-  <!-- Phone 2: Status Checking -->
-  <div class="phone-frame">
-    <div class="phone-notch"></div>
-    <div class="phone-screen-bg"><span>Merchant App</span></div>
-    <div class="dim-overlay"></div>
-
-    <div class="bottom-sheet">
-      <span class="drag-handle"></span>
-
-      <div class="header-bar" style="background:#c800b2">
-        <div class="header-titles">
-          <div class="header-main">Complete Your Payment</div>
-          <div class="header-sub">Secure  ·  Fast  ·  Native UPI</div>
-        </div>
-        <div class="branding-badge">
-          <div class="powered">Powered by</div>
-          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
-        </div>
-      </div>
-
-      <div class="sheet-body">
-        <div class="checking-section">
-          <div class="spinner-wrap">
-            <div class="spinner"></div>
-            <img src="https://tezgateway.com/common/img/logoshild.png" class="spinner-logo" alt="">
-          </div>
-          <div class="checking-title">Verifying your payment...</div>
-          <div class="checking-timer">Checking for 12s&#x2026;</div>
-          <button class="check-btn">Check Status Now</button>
-        </div>
-        <button class="cancel-btn">I'll Check Later</button>
-      </div>
-
-      <div class="news-ticker">
-        <span>Important: Do not press back while payment is processing. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Important: Do not press back while payment is processing.</span>
-      </div>
+  <!-- ── Phone 2: UPI-only (no QR) ── -->
+  <div class="phone">
+    <div class="status-bar"></div>
+    <div class="app-screen">
+      <div class="app-logo">💼</div>
+      <div class="app-name">Merchant App</div>
     </div>
-    <div class="section-label">State 2 — Checking Payment (100s timeout)</div>
-  </div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <span class="handle"></span>
 
-  <!-- Phone 3: Success -->
-  <div class="phone-frame">
-    <div class="phone-notch"></div>
-    <div class="phone-screen-bg"><span>Merchant App</span></div>
-    <div class="dim-overlay"></div>
-
-    <div class="bottom-sheet">
-      <span class="drag-handle"></span>
-
-      <!-- remove_branding = true → badge hidden -->
-      <div class="header-bar" style="background:#2e7d32">
-        <div class="header-titles">
-          <div class="header-main">Complete Your Payment</div>
-          <div class="header-sub">Secure  ·  Fast  ·  Native UPI</div>
+      <div class="hdr" style="background:#1a73e8">
+        <span class="hdr-lock">🔒</span>
+        <div class="hdr-text">
+          <div class="hdr-title">Complete Your Payment</div>
+          <div class="hdr-sub">100% Secure &nbsp;·&nbsp; Native UPI</div>
+        </div>
+        <div class="branding">
+          <span class="pw">Powered by</span>
+          <img src="https://tezgateway.com/logo.png" alt="TezGateway">
         </div>
       </div>
 
-      <div class="sheet-body">
-        <div class="checking-section">
-          <div class="result-card success">
-            <span class="result-icon">&#10003;</span>
-            <div class="result-card-title">Payment Successful</div>
-            <div class="result-card-sub">UTR: 423100123456789</div>
-          </div>
+      <div class="body">
+        <div class="amount-card" style="background:#EEF4FF;border-color:#BFDBFE">
+          <div class="lbl" style="color:#1d4ed8">Amount to Pay</div>
+          <div class="val">&#8377;1,200.00</div>
         </div>
-        <button class="cancel-btn" style="background:#e8f5e9;color:#2e7d32">Close</button>
-      </div>
-    </div>
-    <div class="section-label">State 3a — Success (remove_branding = true)</div>
-  </div>
 
-</div>
+        <div class="sec-hdr">PAY VIA UPI APP</div>
 
-<!-- ════════════ PHONES ROW 2 ════════════ -->
-<div class="phones-row">
-
-  <!-- Failure -->
-  <div class="phone-frame small">
-    <div class="phone-notch"></div>
-    <div class="phone-screen-bg"><span>App</span></div>
-    <div class="dim-overlay"></div>
-    <div class="bottom-sheet">
-      <span class="drag-handle"></span>
-      <div class="header-bar" style="background:#c62828">
-        <div class="header-titles">
-          <div class="header-main">Complete Your Payment</div>
-          <div class="header-sub">Secure  ·  Fast  ·  Native UPI</div>
-        </div>
-      </div>
-      <div class="sheet-body">
-        <div class="checking-section">
-          <div class="result-card fail">
-            <span class="result-icon">&#10007;</span>
-            <div class="result-card-title">Payment Failed</div>
-            <div class="result-card-sub">Transaction failed</div>
-          </div>
-        </div>
-        <button class="cancel-btn" style="background:#ffebee;color:#c62828">Close</button>
-      </div>
-    </div>
-    <div class="section-label">State 3b — Failed</div>
-  </div>
-
-  <!-- Pending -->
-  <div class="phone-frame small">
-    <div class="phone-notch"></div>
-    <div class="phone-screen-bg"><span>App</span></div>
-    <div class="dim-overlay"></div>
-    <div class="bottom-sheet">
-      <span class="drag-handle"></span>
-      <div class="header-bar" style="background:#e65100">
-        <div class="header-titles">
-          <div class="header-main">Complete Your Payment</div>
-          <div class="header-sub">Secure  ·  Fast  ·  Native UPI</div>
-        </div>
-        <div class="branding-badge">
-          <div class="powered">Powered by</div>
-          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
-        </div>
-      </div>
-      <div class="sheet-body">
-        <div class="checking-section">
-          <div class="result-card pending">
-            <span class="result-icon">&#9203;</span>
-            <div class="result-card-title">Payment Pending</div>
-            <div class="result-card-sub">Your payment is being verified.<br>Please check your UPI app.</div>
-          </div>
-        </div>
-        <button class="cancel-btn">Close</button>
-      </div>
-    </div>
-    <div class="section-label">State 3c — Pending (100s timeout)</div>
-  </div>
-
-  <!-- Custom color, no QR, no ticker -->
-  <div class="phone-frame small">
-    <div class="phone-notch"></div>
-    <div class="phone-screen-bg"><span>App</span></div>
-    <div class="dim-overlay"></div>
-    <div class="bottom-sheet">
-      <span class="drag-handle"></span>
-      <div class="header-bar" style="background:#1a73e8">
-        <div class="header-titles">
-          <div class="header-main">Complete Your Payment</div>
-          <div class="header-sub">Secure  ·  Fast  ·  Native UPI</div>
-        </div>
-        <div class="branding-badge">
-          <div class="powered">Powered by</div>
-          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
-        </div>
-      </div>
-      <div class="sheet-body">
-        <div class="amount-label">&#8377;1,200.00</div>
-        <div class="amount-sub">Select a payment method below</div>
         <div class="upi-grid">
-          <button class="upi-btn btn-gpay">
+          <button class="upi-btn g">
             <img src="src/main/res/drawable/ic_gpay.png" alt="" onerror="this.style.display='none'">
             Google Pay
           </button>
-          <button class="upi-btn btn-phonepe">
+          <button class="upi-btn ph">
             <img src="src/main/res/drawable/ic_phonepe.png" alt="" onerror="this.style.display='none'">
             PhonePe
           </button>
-          <button class="upi-btn btn-paytm">
+          <button class="upi-btn pt">
             <img src="src/main/res/drawable/ic_paytm.png" alt="" onerror="this.style.display='none'">
             Paytm
           </button>
         </div>
+
         <button class="cancel-btn" style="margin-top:16px">Cancel Payment</button>
       </div>
+      <!-- no ticker, no QR -->
     </div>
-    <div class="section-label">Custom Color · No QR · No Ticker</div>
+    <div class="phone-lbl">State 1b — No QR · Custom Color · show_qr=false</div>
+  </div>
+
+  <!-- ── Phone 3: Checking state (after UPI app or QR paid tap) ── -->
+  <div class="phone">
+    <div class="status-bar"></div>
+    <div class="app-screen">
+      <div class="app-logo">🛒</div>
+      <div class="app-name">Merchant App</div>
+    </div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <span class="handle"></span>
+
+      <div class="hdr" style="background:#c800b2">
+        <span class="hdr-lock">🔒</span>
+        <div class="hdr-text">
+          <div class="hdr-title">Complete Your Payment</div>
+          <div class="hdr-sub">100% Secure &nbsp;·&nbsp; Native UPI</div>
+        </div>
+        <div class="branding">
+          <span class="pw">Powered by</span>
+          <img src="https://tezgateway.com/logo.png" alt="TezGateway">
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="checking">
+          <div class="spinner-wrap">
+            <div class="ring"></div>
+            <img src="https://tezgateway.com/common/img/logoshild.png" class="ring-logo" alt="">
+          </div>
+          <div class="chk-title">Verifying your payment...</div>
+          <div class="chk-timer">Checking for 18s&#x2026;</div>
+          <button class="check-now-btn">Check Status Now</button>
+        </div>
+        <button class="cancel-btn later">I'll Check Later</button>
+      </div>
+
+      <div class="ticker">
+        <span>Important: Do not press back while payment is processing. &nbsp;&nbsp;&nbsp;&nbsp; Important: Do not press back while payment is processing.</span>
+      </div>
+    </div>
+    <div class="phone-lbl">State 2 — Checking Payment (100s timeout)</div>
   </div>
 
 </div>
 
-<!-- ── Legend ── -->
+
+<!-- ════════════════════════════
+     ROW 2 — Result States
+════════════════════════════ -->
+<div class="row-label">Result States</div>
+<div class="phones-row">
+
+  <!-- Success -->
+  <div class="phone">
+    <div class="status-bar"></div>
+    <div class="app-screen">
+      <div class="app-logo">🛒</div>
+      <div class="app-name">Merchant App</div>
+    </div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <span class="handle"></span>
+      <!-- remove_branding = true → no badge -->
+      <div class="hdr" style="background:#2e7d32">
+        <span class="hdr-lock">🔒</span>
+        <div class="hdr-text">
+          <div class="hdr-title">Complete Your Payment</div>
+          <div class="hdr-sub">100% Secure &nbsp;·&nbsp; Native UPI</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="checking">
+          <div class="result ok">
+            <span class="r-icon">&#10003;</span>
+            <div class="r-title">Payment Successful</div>
+            <div class="r-sub">UTR: 423100987654321</div>
+          </div>
+        </div>
+        <button class="cancel-btn close">Close</button>
+      </div>
+    </div>
+    <div class="phone-lbl">State 3a — Success &nbsp;·&nbsp; remove_branding=true</div>
+  </div>
+
+  <!-- Failure -->
+  <div class="phone">
+    <div class="status-bar"></div>
+    <div class="app-screen">
+      <div class="app-logo">🛒</div>
+      <div class="app-name">Merchant App</div>
+    </div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <span class="handle"></span>
+      <div class="hdr" style="background:#c62828">
+        <span class="hdr-lock">🔒</span>
+        <div class="hdr-text">
+          <div class="hdr-title">Complete Your Payment</div>
+          <div class="hdr-sub">100% Secure &nbsp;·&nbsp; Native UPI</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="checking">
+          <div class="result err">
+            <span class="r-icon">&#10007;</span>
+            <div class="r-title">Payment Failed</div>
+            <div class="r-sub">Transaction declined by bank</div>
+          </div>
+        </div>
+        <button class="cancel-btn close">Close</button>
+      </div>
+    </div>
+    <div class="phone-lbl">State 3b — Payment Failed</div>
+  </div>
+
+  <!-- Pending -->
+  <div class="phone">
+    <div class="status-bar"></div>
+    <div class="app-screen">
+      <div class="app-logo">🛒</div>
+      <div class="app-name">Merchant App</div>
+    </div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <span class="handle"></span>
+      <div class="hdr" style="background:#e65100">
+        <span class="hdr-lock">🔒</span>
+        <div class="hdr-text">
+          <div class="hdr-title">Complete Your Payment</div>
+          <div class="hdr-sub">100% Secure &nbsp;·&nbsp; Native UPI</div>
+        </div>
+        <div class="branding">
+          <span class="pw">Powered by</span>
+          <img src="https://tezgateway.com/logo.png" alt="TezGateway">
+        </div>
+      </div>
+      <div class="body">
+        <div class="checking">
+          <div class="result pnd">
+            <span class="r-icon">&#9203;</span>
+            <div class="r-title">Payment Pending</div>
+            <div class="r-sub">Your payment is being verified.<br>Please check your UPI app.</div>
+          </div>
+        </div>
+        <button class="cancel-btn close">Close</button>
+      </div>
+    </div>
+    <div class="phone-lbl">State 3c — Payment Pending (100s timeout reached)</div>
+  </div>
+
+</div>
+
+
+<!-- ════════ LEGEND ════════ -->
 <div class="legend">
-  <h3>Behaviour Reference</h3>
+  <h3>Behaviour Reference &nbsp;·&nbsp; v1.0.8</h3>
   <table>
-    <tr><td>Powered by TezGateway</td><td>Hidden when <code>remove_branding = true</code></td></tr>
-    <tr><td>Header color</td><td>From <code>CheckoutSettings.headerColor</code> (hex). Applied to spinner tint + check-status button too.</td></tr>
-    <tr><td>Google Pay button</td><td>Shares QR image to GPay via <code>ACTION_SEND</code> + FileProvider. Falls back to deep link if no QR.</td></tr>
-    <tr><td>Other UPI buttons</td><td>Deep link: <code>phonepe_link / paytm_link / bhim_link / amazonpay_link / cred_link</code></td></tr>
-    <tr><td>QR section</td><td>Shown when <code>show_qr = true</code> and <code>qr_image</code> is not blank</td></tr>
-    <tr><td>Status polling</td><td>Starts after user returns from UPI app. Polls every 5s for up to 100s (20 attempts)</td></tr>
-    <tr><td>Early stop</td><td>Stops immediately on SUCCESS or FAILURE — does not wait for 100s</td></tr>
-    <tr><td>Check Status Now</td><td>Cancels current poll and triggers immediate recheck</td></tr>
-    <tr><td>Result card</td><td>Success (green) / Failed (red) / Pending (amber). Auto-dismisses after 1.8s on success, 2s on failure.</td></tr>
-    <tr><td>News ticker</td><td>Marquee shown only when <code>settings.news</code> is not blank</td></tr>
+    <tr>
+      <td>QR "I've Paid" button <span class="badge fix">FIX</span></td>
+      <td>Tap to directly start status polling without leaving the app. Fixes QR payments where <code>onResume</code> never fired.</td>
+    </tr>
+    <tr>
+      <td>Amount card <span class="badge new">NEW</span></td>
+      <td>Purple-tinted card showing "Amount to Pay" label + bold ₹ value. Color tints with <code>headerColor</code>.</td>
+    </tr>
+    <tr>
+      <td>OR SCAN QR divider <span class="badge new">NEW</span></td>
+      <td>Horizontal rule with text, shown only when <code>show_qr=true</code> and <code>qr_image</code> is not blank.</td>
+    </tr>
+    <tr>
+      <td>QR card <span class="badge new">NEW</span></td>
+      <td>White rounded card (<code>tez_qr_card_bg</code>) with border + subtle shadow. Replaces plain centered QR image.</td>
+    </tr>
+    <tr>
+      <td>Powered by TezGateway</td>
+      <td>Logo image from <code>tezgateway.com/logo.png</code>. Hidden when <code>remove_branding = true</code>.</td>
+    </tr>
+    <tr>
+      <td>Spinner logo</td>
+      <td>Shield logo centered inside spinner ring. Loaded from <code>tezgateway.com/common/img/logoshild.png</code>.</td>
+    </tr>
+    <tr>
+      <td>Header color</td>
+      <td>From <code>CheckoutSettings.headerColor</code>. Also applied to spinner tint, "Check Status" border, "I've Paid" button.</td>
+    </tr>
+    <tr>
+      <td>Google Pay button</td>
+      <td>Shares QR image via <code>ACTION_SEND</code> + FileProvider. Falls back to <code>gpay_link</code> if no QR.</td>
+    </tr>
+    <tr>
+      <td>Status polling</td>
+      <td>Polls every 5s for up to 100s (20 attempts). Stops immediately on SUCCESS or FAILURE.</td>
+    </tr>
+    <tr>
+      <td>Result cards</td>
+      <td>Success (green) auto-dismisses 1.8s, Failure (red) 2s, Pending (amber) stays until user closes.</td>
+    </tr>
+    <tr>
+      <td>News ticker</td>
+      <td>Marquee at bottom, shown only when <code>settings.news</code> is not blank.</td>
+    </tr>
   </table>
 </div>
 
