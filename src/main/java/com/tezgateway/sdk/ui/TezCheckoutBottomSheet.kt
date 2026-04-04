@@ -39,6 +39,9 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         private const val ARG_USER_TOKEN = "user_token"
         private const val ARG_ORDER_ID   = "order_id"
 
+        private const val LOGO_URL   = "https://tezgateway.com/logo.png"
+        private const val SHIELD_URL = "https://tezgateway.com/common/img/logoshild.png"
+
         fun newInstance(
             baseUrl: String,
             userToken: String,
@@ -89,6 +92,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     private lateinit var resultSubtitle:  TextView
     private lateinit var btnCheckStatus:  View
     private lateinit var btnCancel:       Button
+    private lateinit var brandingLogo:    ImageView
+    private lateinit var spinnerLogo:     ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -123,6 +128,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         resultSubtitle  = v.findViewById(R.id.tez_result_subtitle)
         btnCheckStatus  = v.findViewById(R.id.btn_check_status)
         btnCancel       = v.findViewById(R.id.btn_cancel)
+        brandingLogo    = v.findViewById(R.id.tez_branding_logo)
+        spinnerLogo     = v.findViewById(R.id.tez_spinner_logo)
     }
 
     private fun setupUI(v: View) {
@@ -251,6 +258,28 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
         // ── Check Status Now button ───────────────────────────────────
         btnCheckStatus.setOnClickListener { retriggerStatusCheck() }
+
+        // ── Logos (loaded from TezGateway CDN, silently ignored if offline) ──
+        loadImageInto(LOGO_URL,   brandingLogo)
+        loadImageInto(SHIELD_URL, spinnerLogo)
+    }
+
+    /**
+     * Downloads an image from [url] on IO thread and sets it on [imageView] on Main.
+     * Uses OkHttp (already a project dependency). Failure is silently swallowed.
+     */
+    private fun loadImageInto(url: String, imageView: ImageView) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val request  = okhttp3.Request.Builder().url(url).build()
+                val bytes    = okhttp3.OkHttpClient().newCall(request).execute()
+                    .body?.bytes() ?: return@launch
+                val bitmap   = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                withContext(Dispatchers.Main) { imageView.setImageBitmap(bitmap) }
+            } catch (e: Exception) {
+                // Logo is cosmetic — SDK never crashes on a missing logo
+            }
+        }
     }
 
     // ── Payment launch helpers ─────────────────────────────────────────

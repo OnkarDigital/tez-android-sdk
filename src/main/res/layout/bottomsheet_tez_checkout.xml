@@ -76,15 +76,14 @@
                 android:alpha="0.6"
                 android:gravity="end" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="TezGateway"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:alpha="0.85"
-                android:gravity="end" />
+            <!-- TezGateway logo — loaded from URL in TezCheckoutBottomSheet.kt -->
+            <ImageView
+                android:id="@+id/tez_branding_logo"
+                android:layout_width="90dp"
+                android:layout_height="22dp"
+                android:scaleType="fitEnd"
+                android:alpha="0.9"
+                android:adjustViewBounds="true" />
         </LinearLayout>
     </LinearLayout>
 
@@ -322,14 +321,29 @@
                 android:paddingTop="16dp"
                 android:paddingBottom="8dp">
 
-                <!-- Spinner (hidden once result arrives) -->
-                <ProgressBar
-                    android:id="@+id/tez_status_spinner"
-                    style="@android:style/Widget.ProgressBar.Large"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:indeterminateTint="#c800b2"
-                    android:layout_marginBottom="16dp" />
+                <!-- Spinner with shield logo centered inside -->
+                <FrameLayout
+                    android:id="@+id/tez_spinner_wrap"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_marginBottom="16dp">
+
+                    <ProgressBar
+                        android:id="@+id/tez_status_spinner"
+                        style="@android:style/Widget.ProgressBar.Large"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:indeterminateTint="#c800b2" />
+
+                    <!-- Shield logo loaded from URL — centered inside spinner ring -->
+                    <ImageView
+                        android:id="@+id/tez_spinner_logo"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true" />
+                </FrameLayout>
 
                 <!-- Status message -->
                 <TextView

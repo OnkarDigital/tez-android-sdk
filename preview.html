@@ -75,9 +75,9 @@
   .header-titles { flex: 1; }
   .header-main { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: .2px; }
   .header-sub  { color: rgba(255,255,255,.6); font-size: 10px; margin-top: 2px; letter-spacing: .5px; }
-  .branding-badge { text-align: right; }
+  .branding-badge { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .branding-badge .powered { color: rgba(255,255,255,.55); font-size: 8px; }
-  .branding-badge .name    { color: rgba(255,255,255,.85); font-size: 11px; font-weight: 700; }
+  .branding-badge .branding-logo { height: 20px; width: auto; object-fit: contain; opacity: 0.88; filter: brightness(0) invert(1); }
 
   /* Body */
   .sheet-body { padding: 18px; background: #fff; }
@@ -129,10 +129,22 @@
     display: flex; flex-direction: column; align-items: center;
     padding: 20px 0 8px;
   }
+
+  /* Spinner wrap — ring + logo stacked */
+  .spinner-wrap {
+    position: relative; width: 72px; height: 72px; margin-bottom: 18px;
+  }
   .spinner {
-    width: 52px; height: 52px; border: 4px solid #f0f0f0;
+    position: absolute; top: 0; left: 0;
+    width: 72px; height: 72px; border: 5px solid #f0f0f0;
     border-top-color: #c800b2; border-radius: 50%;
-    animation: spin .9s linear infinite; margin-bottom: 18px;
+    animation: spin .9s linear infinite;
+  }
+  .spinner-logo {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 34px; height: 34px;
+    object-fit: contain; border-radius: 50%;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -220,7 +232,7 @@
         </div>
         <div class="branding-badge">
           <div class="powered">Powered by</div>
-          <div class="name">TezGateway</div>
+          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
         </div>
       </div>
 
@@ -306,13 +318,16 @@
         </div>
         <div class="branding-badge">
           <div class="powered">Powered by</div>
-          <div class="name">TezGateway</div>
+          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
         </div>
       </div>
 
       <div class="sheet-body">
         <div class="checking-section">
-          <div class="spinner"></div>
+          <div class="spinner-wrap">
+            <div class="spinner"></div>
+            <img src="https://tezgateway.com/common/img/logoshild.png" class="spinner-logo" alt="">
+          </div>
           <div class="checking-title">Verifying your payment...</div>
           <div class="checking-timer">Checking for 12s&#x2026;</div>
           <button class="check-btn">Check Status Now</button>
@@ -404,7 +419,7 @@
         </div>
         <div class="branding-badge">
           <div class="powered">Powered by</div>
-          <div class="name">TezGateway</div>
+          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
         </div>
       </div>
       <div class="sheet-body">
@@ -435,7 +450,7 @@
         </div>
         <div class="branding-badge">
           <div class="powered">Powered by</div>
-          <div class="name">TezGateway</div>
+          <img src="https://tezgateway.com/logo.png" class="branding-logo" alt="TezGateway">
         </div>
       </div>
       <div class="sheet-body">
