@@ -19,10 +19,11 @@ object UpiIntentHelper {
 
     /**
      * Checks if a specific UPI application is installed on the device.
+     * Uses getApplicationInfo with 0 flags — more reliable than GET_ACTIVITIES on Android 11+.
      */
     fun isAppInstalled(context: Context, app: UpiApp): Boolean {
         return try {
-            context.packageManager.getPackageInfo(app.packageName, PackageManager.GET_ACTIVITIES)
+            context.packageManager.getApplicationInfo(app.packageName, 0)
             true
         } catch (e: PackageManager.NameNotFoundException) {
             false

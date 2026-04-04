@@ -1,6 +1,7 @@
 package com.tezgateway.sdk.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
@@ -10,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.tezgateway.sdk.R
@@ -18,6 +20,8 @@ import com.tezgateway.sdk.models.CheckoutSettings
 import com.tezgateway.sdk.models.PaymentData
 import com.tezgateway.sdk.network.StatusPollingService
 import com.tezgateway.sdk.utils.UpiIntentHelper
+import java.io.File
+import java.io.FileOutputStream
 
 /**
  * Native BottomSheet checkout UI for TezGateway SDK.
@@ -116,10 +120,10 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
         val ctx = requireContext()
 
-        // GPay
+        // GPay — share QR image directly to GPay app
         if (settings.Show_GpayButton && UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.GOOGLE_PAY)) {
             btnGpay.visibility = View.VISIBLE
-            btnGpay.setOnClickListener { launchUpiApp(UpiIntentHelper.UpiApp.GOOGLE_PAY) }
+            btnGpay.setOnClickListener { shareQrToGpay() }
         } else btnGpay.visibility = View.GONE
 
         // PhonePe
@@ -175,6 +179,47 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             pollingService?.stopPolling()
             callback.onPaymentFailed(orderId, "User cancelled")
             dismiss()
+        }
+    }
+
+    /**
+     * Decodes qr_image (base64 PNG) → saves to app cache → shares directly to Google Pay.
+     * Falls back to gpay_link deep link if qr_image is unavailable.
+     */
+    private fun shareQrToGpay() {
+        val qrBase64 = paymentData.qr_image
+        if (qrBase64.isBlank()) {
+            // No QR image — fall back to deep link
+            launchUpiApp(UpiIntentHelper.UpiApp.GOOGLE_PAY)
+            return
+        }
+        try {
+            val base64Data = qrBase64.substringAfter("base64,")
+            val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+            val cacheFile = File(requireContext().cacheDir, "tez_qr_pay.png")
+            FileOutputStream(cacheFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+
+            val uri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.tezgateway.fileprovider",
+                cacheFile
+            )
+
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                setPackage("com.google.android.apps.nbu.paisa.user")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            paymentLaunched = true
+        } catch (e: Exception) {
+            Toast.makeText(context, "Could not open Google Pay", Toast.LENGTH_SHORT).show()
         }
     }
 

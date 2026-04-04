@@ -23,5 +23,16 @@
 
     <application>
         <!-- TezCheckoutBottomSheet (library Activity-like fragment host) -->
+
+        <!-- FileProvider for sharing QR image to GPay and other UPI apps -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.tezgateway.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/tez_file_paths" />
+        </provider>
     </application>
 </manifest>

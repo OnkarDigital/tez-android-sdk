@@ -19,7 +19,7 @@ A native Android SDK for integrating TezGateway UPI payment gateway — **no Web
 
 ```gradle
 dependencies {
-    implementation 'com.github.OnkarDigital:tez-android-sdk:1.0.5'
+    implementation 'com.github.OnkarDigital:tez-android-sdk:1.0.6'
 }
 ```
 
@@ -180,4 +180,4 @@ Configure your Webhook URL in the TezGateway merchant panel. When a payment sett
 
 ---
 
-*TezGateway Android SDK · v1.0.5*
+*TezGateway Android SDK · v1.0.6*

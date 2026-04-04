@@ -94,9 +94,13 @@
                     android:textSize="12sp"
                     android:backgroundTint="#1a73e8"
                     android:textColor="#FFFFFF"
-                    android:drawableTop="@drawable/ic_gpay"
                     android:visibility="gone"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_gpay"
+                    app:iconGravity="top"
+                    app:iconTint="#FFFFFF"
+                    app:iconSize="20dp"
+                    app:iconPadding="4dp" />
 
                 <!-- PhonePe -->
                 <Button
@@ -109,9 +113,13 @@
                     android:textSize="12sp"
                     android:backgroundTint="#5f259f"
                     android:textColor="#FFFFFF"
-                    android:drawableTop="@drawable/ic_phonepe"
                     android:visibility="gone"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_phonepe"
+                    app:iconGravity="top"
+                    app:iconTint="#FFFFFF"
+                    app:iconSize="20dp"
+                    app:iconPadding="4dp" />
 
                 <!-- Paytm -->
                 <Button
@@ -124,9 +132,13 @@
                     android:textSize="12sp"
                     android:backgroundTint="#00BAF2"
                     android:textColor="#FFFFFF"
-                    android:drawableTop="@drawable/ic_paytm"
                     android:visibility="gone"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_paytm"
+                    app:iconGravity="top"
+                    app:iconTint="#FFFFFF"
+                    app:iconSize="20dp"
+                    app:iconPadding="4dp" />
 
                 <!-- BHIM UPI -->
                 <Button
@@ -140,7 +152,12 @@
                     android:backgroundTint="#00529a"
                     android:textColor="#FFFFFF"
                     android:visibility="gone"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_bhim"
+                    app:iconGravity="top"
+                    app:iconTint="#FFFFFF"
+                    app:iconSize="20dp"
+                    app:iconPadding="4dp" />
 
                 <!-- Amazon Pay -->
                 <Button
@@ -154,7 +171,12 @@
                     android:backgroundTint="#FF9900"
                     android:textColor="#FFFFFF"
                     android:visibility="gone"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_amazonpay"
+                    app:iconGravity="top"
+                    app:iconTint="#FFFFFF"
+                    app:iconSize="20dp"
+                    app:iconPadding="4dp" />
 
                 <!-- CRED -->
                 <Button
@@ -168,7 +190,12 @@
                     android:backgroundTint="#1c1c1e"
                     android:textColor="#FFFFFF"
                     android:visibility="gone"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_cred"
+                    app:iconGravity="top"
+                    app:iconTint="#FFFFFF"
+                    app:iconSize="20dp"
+                    app:iconPadding="4dp" />
             </GridLayout>
 
             <!-- ── DIVIDER ── -->
