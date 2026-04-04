@@ -30,7 +30,8 @@ data class PaymentData(
     val gpay_link: String = "",
     val amazonpay_link: String = "",
     val cred_link: String = "",
-    val qr_image: String = ""
+    val qr_image: String = "",
+    val amount: String = ""
 )
 
 // ─────────────────────────────────────────────────────────────────

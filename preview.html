@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TezGateway SDK — UI Preview v1.0.8</title>
+<title>TezGateway SDK — UI Preview v1.0.9</title>
 <style>
 /* ════════ RESET ════════ */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -137,22 +137,22 @@ body {
 /* UPI grid */
 .upi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 6px; }
 .upi-btn {
-  border: none; border-radius: 14px; height: 72px;
+  background: transparent; border-radius: 14px; height: 72px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 5px; cursor: pointer; font-size: 11px; font-weight: 600; color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,.18);
-  transition: transform .12s, filter .12s;
+  gap: 5px; cursor: pointer; font-size: 11px; font-weight: 600;
+  border-width: 1.5px; border-style: solid;
+  transition: transform .12s, background .12s;
 }
-.upi-btn:hover  { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+.upi-btn:hover  { background: rgba(0,0,0,.04); transform: translateY(-2px); }
 .upi-btn:active { transform: scale(.95); }
 .upi-btn img    { width: 24px; height: 24px; border-radius: 5px; }
 
-.g  { background: #1a73e8; }
-.ph { background: #5f259f; }
-.pt { background: #00BAF2; }
-.bh { background: #00529a; }
-.am { background: #FF9900; }
-.cr { background: #1c1c1e; }
+.g  { border-color: #1a73e8; color: #1a73e8; }
+.ph { border-color: #5f259f; color: #5f259f; }
+.pt { border-color: #00BAF2; color: #00BAF2; }
+.bh { border-color: #00529a; color: #00529a; }
+.am { border-color: #FF9900; color: #FF9900; }
+.cr { border-color: #1c1c1e; color: #1c1c1e; }
 
 /* OR divider */
 .or-row {
@@ -306,7 +306,7 @@ body {
 <!-- ════════ PAGE HEADER ════════ -->
 <div class="page-header">
   <h1>TezGateway Android SDK</h1>
-  <p>Native BottomSheet Preview &nbsp;·&nbsp; v1.0.8</p>
+  <p>Native BottomSheet Preview &nbsp;·&nbsp; v1.0.9</p>
 </div>
 
 

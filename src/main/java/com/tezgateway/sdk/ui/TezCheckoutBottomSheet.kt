@@ -86,6 +86,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     // ── Views ──────────────────────────────────────────────────────────
     private lateinit var paymentSection:  View
+    private lateinit var amountSection:   View
     private lateinit var checkingSection: View
     private lateinit var statusSpinner:   View
     private lateinit var statusMessage:   TextView
@@ -121,6 +122,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     private fun bindViews(v: View) {
         paymentSection  = v.findViewById(R.id.tez_payment_section)
+        amountSection   = v.findViewById(R.id.tez_amount_section)
         checkingSection = v.findViewById(R.id.tez_checking_section)
         statusSpinner   = v.findViewById(R.id.tez_status_spinner)
         statusMessage   = v.findViewById(R.id.tez_status_message)
@@ -141,6 +143,23 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                           catch (e: Exception) { Color.parseColor("#c800b2") }
 
         v.findViewById<View>(R.id.tez_header_bar).setBackgroundColor(headerColor)
+
+        // ── Amount card ───────────────────────────────────────────────
+        if (paymentData.amount.isBlank()) {
+            amountSection.visibility = View.GONE
+        } else {
+            amountSection.visibility = View.VISIBLE
+            v.findViewById<TextView>(R.id.tez_amount_label).text = paymentData.amount
+        }
+
+        // ── UPI button text color: contrast against body color ────────
+        val bodyColor = try { Color.parseColor(settings.bodyColor) }
+                        catch (e: Exception) { Color.WHITE }
+        val bodyLuminance = (0.299 * Color.red(bodyColor) +
+                            0.587 * Color.green(bodyColor) +
+                            0.114 * Color.blue(bodyColor)) / 255.0
+        // Dark body → white text; Light body → each button's own brand color
+        val upiTextColor: Int? = if (bodyLuminance < 0.5) Color.WHITE else null
 
         // ── Spinner tint ──────────────────────────────────────────────
         try {
@@ -204,6 +223,15 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         setupUpiButton(v, R.id.btn_cred,
             enabled = UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.CRED)
         ) { launchUpiApp(UpiIntentHelper.UpiApp.CRED) }
+
+        // Apply text color override on dark body backgrounds
+        if (upiTextColor != null) {
+            listOf(R.id.btn_gpay, R.id.btn_phonepe, R.id.btn_paytm,
+                   R.id.btn_bhim, R.id.btn_amazonpay, R.id.btn_cred).forEach { id ->
+                v.findViewById<com.google.android.material.button.MaterialButton>(id)
+                    .setTextColor(upiTextColor)
+            }
+        }
 
         // ── QR section ────────────────────────────────────────────────
         val qrSection    = v.findViewById<View>(R.id.tez_qr_section)

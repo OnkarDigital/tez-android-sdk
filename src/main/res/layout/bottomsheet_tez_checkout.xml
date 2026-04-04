@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    TezGateway SDK — Native Payment BottomSheet Layout  v1.0.8
+    TezGateway SDK — Native Payment BottomSheet Layout  v1.0.9
     Header color: applied from CheckoutSettings.headerColor
     Branding badge: hidden when remove_branding = true
     QR "I've Paid" button: starts status polling for QR-scanned payments
@@ -124,6 +124,7 @@
 
                 <!-- ── AMOUNT CARD ── -->
                 <LinearLayout
+                    android:id="@+id/tez_amount_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
@@ -171,8 +172,9 @@
                     android:useDefaultMargins="false"
                     android:layout_marginBottom="6dp">
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_gpay"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="72dp"
                         android:layout_columnWeight="1"
@@ -180,19 +182,21 @@
                         android:text="Google Pay"
                         android:textSize="11sp"
                         android:textAllCaps="false"
-                        android:backgroundTint="#1a73e8"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#1a73e8"
                         android:visibility="gone"
+                        app:backgroundTint="@android:color/transparent"
+                        app:strokeColor="#1a73e8"
+                        app:strokeWidth="1.5dp"
                         app:cornerRadius="14dp"
                         app:icon="@drawable/ic_gpay"
                         app:iconGravity="top"
                         app:iconTint="@null"
                         app:iconSize="24dp"
-                        app:iconPadding="3dp"
-                        app:elevation="2dp" />
+                        app:iconPadding="3dp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_phonepe"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="72dp"
                         android:layout_columnWeight="1"
@@ -200,19 +204,21 @@
                         android:text="PhonePe"
                         android:textSize="11sp"
                         android:textAllCaps="false"
-                        android:backgroundTint="#5f259f"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#5f259f"
                         android:visibility="gone"
+                        app:backgroundTint="@android:color/transparent"
+                        app:strokeColor="#5f259f"
+                        app:strokeWidth="1.5dp"
                         app:cornerRadius="14dp"
                         app:icon="@drawable/ic_phonepe"
                         app:iconGravity="top"
                         app:iconTint="@null"
                         app:iconSize="24dp"
-                        app:iconPadding="3dp"
-                        app:elevation="2dp" />
+                        app:iconPadding="3dp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_paytm"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="72dp"
                         android:layout_columnWeight="1"
@@ -220,19 +226,21 @@
                         android:text="Paytm"
                         android:textSize="11sp"
                         android:textAllCaps="false"
-                        android:backgroundTint="#00BAF2"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#00BAF2"
                         android:visibility="gone"
+                        app:backgroundTint="@android:color/transparent"
+                        app:strokeColor="#00BAF2"
+                        app:strokeWidth="1.5dp"
                         app:cornerRadius="14dp"
                         app:icon="@drawable/ic_paytm"
                         app:iconGravity="top"
                         app:iconTint="@null"
                         app:iconSize="24dp"
-                        app:iconPadding="3dp"
-                        app:elevation="2dp" />
+                        app:iconPadding="3dp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_bhim"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="72dp"
                         android:layout_columnWeight="1"
@@ -240,19 +248,21 @@
                         android:text="BHIM UPI"
                         android:textSize="11sp"
                         android:textAllCaps="false"
-                        android:backgroundTint="#00529a"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#00529a"
                         android:visibility="gone"
+                        app:backgroundTint="@android:color/transparent"
+                        app:strokeColor="#00529a"
+                        app:strokeWidth="1.5dp"
                         app:cornerRadius="14dp"
                         app:icon="@drawable/ic_bhim"
                         app:iconGravity="top"
                         app:iconTint="@null"
                         app:iconSize="24dp"
-                        app:iconPadding="3dp"
-                        app:elevation="2dp" />
+                        app:iconPadding="3dp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_amazonpay"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="72dp"
                         android:layout_columnWeight="1"
@@ -260,19 +270,21 @@
                         android:text="Amazon Pay"
                         android:textSize="11sp"
                         android:textAllCaps="false"
-                        android:backgroundTint="#FF9900"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#FF9900"
                         android:visibility="gone"
+                        app:backgroundTint="@android:color/transparent"
+                        app:strokeColor="#FF9900"
+                        app:strokeWidth="1.5dp"
                         app:cornerRadius="14dp"
                         app:icon="@drawable/ic_amazonpay"
                         app:iconGravity="top"
                         app:iconTint="@null"
                         app:iconSize="24dp"
-                        app:iconPadding="3dp"
-                        app:elevation="2dp" />
+                        app:iconPadding="3dp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_cred"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="72dp"
                         android:layout_columnWeight="1"
@@ -280,16 +292,17 @@
                         android:text="CRED"
                         android:textSize="11sp"
                         android:textAllCaps="false"
-                        android:backgroundTint="#1c1c1e"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#1c1c1e"
                         android:visibility="gone"
+                        app:backgroundTint="@android:color/transparent"
+                        app:strokeColor="#1c1c1e"
+                        app:strokeWidth="1.5dp"
                         app:cornerRadius="14dp"
                         app:icon="@drawable/ic_cred"
                         app:iconGravity="top"
                         app:iconTint="@null"
                         app:iconSize="24dp"
-                        app:iconPadding="3dp"
-                        app:elevation="2dp" />
+                        app:iconPadding="3dp" />
                 </GridLayout>
 
                 <!-- ── OR DIVIDER (shown only when QR is visible) ── -->
