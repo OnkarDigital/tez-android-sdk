@@ -28,9 +28,13 @@ import java.io.FileOutputStream
  * TezGateway native BottomSheet checkout UI.
  *
  * States:
- *   1. Payment Selection  — user picks a UPI app or scans QR
- *   2. Status Checking    — after returning from UPI app; polls until result
- *   3. Result             — success / failure / pending card shown inline
+ *   1. Payment Selection — user picks a UPI app or scans QR
+ *   2. Status Checking   — polling after UPI app return OR "I've Paid" QR tap
+ *   3. Result            — success / failure / pending card shown inline
+ *
+ * QR Fix (v1.0.8):
+ *   "I've Paid — Check Status" button inside the QR card directly starts
+ *   status polling without requiring the user to leave and return to the app.
  */
 class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
@@ -76,7 +80,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     private lateinit var orderId:     String
 
     private var pollingService: StatusPollingService? = null
-    private var paymentLaunched  = false
+    private var paymentLaunched  = false   // true after launching a UPI app intent
     private var resultDelivered  = false
     private var timerJob: Job?   = null
 
@@ -107,7 +111,6 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         userToken   = arguments?.getString(ARG_USER_TOKEN) ?: ""
         orderId     = arguments?.getString(ARG_ORDER_ID)   ?: ""
 
-        // Clear statics immediately
         pendingPaymentData = null
         pendingSettings    = null
         pendingCallback    = null
@@ -134,100 +137,79 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     private fun setupUI(v: View) {
         // ── Header color ──────────────────────────────────────────────
-        val headerBar = v.findViewById<View>(R.id.tez_header_bar)
-        try {
-            headerBar.setBackgroundColor(Color.parseColor(settings.headerColor))
-        } catch (e: Exception) {
-            headerBar.setBackgroundColor(Color.parseColor("#c800b2"))
-        }
+        val headerColor = try { Color.parseColor(settings.headerColor) }
+                          catch (e: Exception) { Color.parseColor("#c800b2") }
 
-        // ── Spinner tint matches header color ─────────────────────────
+        v.findViewById<View>(R.id.tez_header_bar).setBackgroundColor(headerColor)
+
+        // ── Spinner tint ──────────────────────────────────────────────
         try {
-            val pb = v.findViewById<android.widget.ProgressBar>(R.id.tez_status_spinner)
-            val color = Color.parseColor(settings.headerColor)
-            pb.indeterminateTintList =
-                android.content.res.ColorStateList.valueOf(color)
+            v.findViewById<ProgressBar>(R.id.tez_status_spinner)
+                .indeterminateTintList =
+                android.content.res.ColorStateList.valueOf(headerColor)
         } catch (e: Exception) { /* keep default */ }
 
-        // ── "Powered by TezGateway" badge ─────────────────────────────
-        val brandingBadge = v.findViewById<View>(R.id.tez_branding_badge)
-        brandingBadge.visibility =
+        // ── "Check Status Now" button tint ────────────────────────────
+        try {
+            val csl = android.content.res.ColorStateList.valueOf(headerColor)
+            v.findViewById<com.google.android.material.button.MaterialButton>(
+                R.id.btn_check_status).apply {
+                strokeColor = csl
+                setTextColor(headerColor)
+            }
+        } catch (e: Exception) { /* keep default */ }
+
+        // ── Branding badge ────────────────────────────────────────────
+        v.findViewById<View>(R.id.tez_branding_badge).visibility =
             if (settings.remove_branding) View.GONE else View.VISIBLE
 
-        // ── "Check Status Now" button stroke color ────────────────────
-        try {
-            val checkBtn = v.findViewById<com.google.android.material.button.MaterialButton>(
-                R.id.btn_check_status)
-            val color = Color.parseColor(settings.headerColor)
-            val csl = android.content.res.ColorStateList.valueOf(color)
-            checkBtn.strokeColor = csl
-            checkBtn.setTextColor(color)
-        } catch (e: Exception) { /* keep default */ }
-
         // ── News ticker ───────────────────────────────────────────────
-        val newsTicker = v.findViewById<TextView>(R.id.tez_news_ticker)
-        if (settings.news.isNotBlank()) {
-            newsTicker.text      = settings.news
-            newsTicker.isSelected = true
-            newsTicker.visibility = View.VISIBLE
-        } else {
-            newsTicker.visibility = View.GONE
+        v.findViewById<TextView>(R.id.tez_news_ticker).let { ticker ->
+            if (settings.news.isNotBlank()) {
+                ticker.text       = settings.news
+                ticker.isSelected = true
+                ticker.visibility = View.VISIBLE
+            } else {
+                ticker.visibility = View.GONE
+            }
         }
 
         // ── UPI buttons ───────────────────────────────────────────────
         val ctx = requireContext()
 
-        val btnGpay    = v.findViewById<Button>(R.id.btn_gpay)
-        val btnPhonepe = v.findViewById<Button>(R.id.btn_phonepe)
-        val btnPaytm   = v.findViewById<Button>(R.id.btn_paytm)
-        val btnBhim    = v.findViewById<Button>(R.id.btn_bhim)
-        val btnAmazon  = v.findViewById<Button>(R.id.btn_amazonpay)
-        val btnCred    = v.findViewById<Button>(R.id.btn_cred)
+        setupUpiButton(v, R.id.btn_gpay,
+            enabled = settings.Show_GpayButton &&
+                      UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.GOOGLE_PAY)
+        ) { shareQrToGpay() }
 
-        // GPay — shares QR image directly
-        if (settings.Show_GpayButton &&
-            UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.GOOGLE_PAY)) {
-            btnGpay.visibility = View.VISIBLE
-            btnGpay.setOnClickListener { shareQrToGpay() }
-        } else btnGpay.visibility = View.GONE
+        setupUpiButton(v, R.id.btn_phonepe,
+            enabled = settings.show_phonepe &&
+                      UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.PHONEPE)
+        ) { launchUpiApp(UpiIntentHelper.UpiApp.PHONEPE) }
 
-        // PhonePe
-        if (settings.show_phonepe &&
-            UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.PHONEPE)) {
-            btnPhonepe.visibility = View.VISIBLE
-            btnPhonepe.setOnClickListener { launchUpiApp(UpiIntentHelper.UpiApp.PHONEPE) }
-        } else btnPhonepe.visibility = View.GONE
+        setupUpiButton(v, R.id.btn_paytm,
+            enabled = settings.show_paytmButton &&
+                      UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.PAYTM)
+        ) { launchUpiApp(UpiIntentHelper.UpiApp.PAYTM) }
 
-        // Paytm
-        if (settings.show_paytmButton &&
-            UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.PAYTM)) {
-            btnPaytm.visibility = View.VISIBLE
-            btnPaytm.setOnClickListener { launchUpiApp(UpiIntentHelper.UpiApp.PAYTM) }
-        } else btnPaytm.visibility = View.GONE
+        setupUpiButton(v, R.id.btn_bhim,
+            enabled = settings.Show_IntentButton &&
+                      UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.BHIM)
+        ) { launchUpiApp(UpiIntentHelper.UpiApp.BHIM) }
 
-        // BHIM
-        if (settings.Show_IntentButton &&
-            UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.BHIM)) {
-            btnBhim.visibility = View.VISIBLE
-            btnBhim.setOnClickListener { launchUpiApp(UpiIntentHelper.UpiApp.BHIM) }
-        } else btnBhim.visibility = View.GONE
+        setupUpiButton(v, R.id.btn_amazonpay,
+            enabled = UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.AMAZON_PAY)
+        ) { launchUpiApp(UpiIntentHelper.UpiApp.AMAZON_PAY) }
 
-        // Amazon Pay
-        if (UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.AMAZON_PAY)) {
-            btnAmazon.visibility = View.VISIBLE
-            btnAmazon.setOnClickListener { launchUpiApp(UpiIntentHelper.UpiApp.AMAZON_PAY) }
-        } else btnAmazon.visibility = View.GONE
-
-        // CRED
-        if (UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.CRED)) {
-            btnCred.visibility = View.VISIBLE
-            btnCred.setOnClickListener { launchUpiApp(UpiIntentHelper.UpiApp.CRED) }
-        } else btnCred.visibility = View.GONE
+        setupUpiButton(v, R.id.btn_cred,
+            enabled = UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.CRED)
+        ) { launchUpiApp(UpiIntentHelper.UpiApp.CRED) }
 
         // ── QR section ────────────────────────────────────────────────
-        val qrSection  = v.findViewById<View>(R.id.tez_qr_section)
-        val qrDivider  = v.findViewById<View>(R.id.tez_qr_divider)
-        val qrImageView = v.findViewById<ImageView>(R.id.tez_qr_image)
+        val qrSection    = v.findViewById<View>(R.id.tez_qr_section)
+        val orDivider    = v.findViewById<View>(R.id.tez_or_divider)
+        val qrImageView  = v.findViewById<ImageView>(R.id.tez_qr_image)
+        val btnQrPaid    = v.findViewById<Button>(R.id.btn_qr_paid)
 
         if (settings.show_qr && paymentData.qr_image.isNotBlank()) {
             try {
@@ -235,13 +217,26 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 val bytes  = Base64.decode(base64Data, Base64.DEFAULT)
                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 qrImageView.setImageBitmap(bitmap)
+
                 qrSection.visibility = View.VISIBLE
-                qrDivider.visibility = View.VISIBLE
+                orDivider.visibility = View.VISIBLE
+
+                // Tint the "I've Paid" button to match the merchant's header color
+                btnQrPaid.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(headerColor)
+
+                // ── QR BUG FIX: tap "I've Paid" → directly start status polling ──
+                btnQrPaid.setOnClickListener {
+                    showCheckingState()
+                    startPolling()
+                }
             } catch (e: Exception) {
                 qrSection.visibility = View.GONE
+                orDivider.visibility = View.GONE
             }
         } else {
             qrSection.visibility = View.GONE
+            orDivider.visibility = View.GONE
         }
 
         // ── Cancel button ─────────────────────────────────────────────
@@ -259,61 +254,60 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         // ── Check Status Now button ───────────────────────────────────
         btnCheckStatus.setOnClickListener { retriggerStatusCheck() }
 
-        // ── Logos (loaded from TezGateway CDN, silently ignored if offline) ──
+        // ── Logos ─────────────────────────────────────────────────────
         loadImageInto(LOGO_URL,   brandingLogo)
         loadImageInto(SHIELD_URL, spinnerLogo)
     }
 
-    /**
-     * Downloads an image from [url] on IO thread and sets it on [imageView] on Main.
-     * Uses OkHttp (already a project dependency). Failure is silently swallowed.
-     */
-    private fun loadImageInto(url: String, imageView: ImageView) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val request  = okhttp3.Request.Builder().url(url).build()
-                val bytes    = okhttp3.OkHttpClient().newCall(request).execute()
-                    .body?.bytes() ?: return@launch
-                val bitmap   = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                withContext(Dispatchers.Main) { imageView.setImageBitmap(bitmap) }
-            } catch (e: Exception) {
-                // Logo is cosmetic — SDK never crashes on a missing logo
-            }
+    /** Show/hide a UPI button and set its click listener. */
+    private fun setupUpiButton(v: View, id: Int, enabled: Boolean, onClick: () -> Unit) {
+        val btn = v.findViewById<Button>(id)
+        if (enabled) {
+            btn.visibility = View.VISIBLE
+            btn.setOnClickListener { onClick() }
+        } else {
+            btn.visibility = View.GONE
         }
     }
 
-    // ── Payment launch helpers ─────────────────────────────────────────
+    // ── Image loading ──────────────────────────────────────────────────
+
+    private fun loadImageInto(url: String, imageView: ImageView) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val bytes = okhttp3.OkHttpClient()
+                    .newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().body?.bytes() ?: return@launch
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                withContext(Dispatchers.Main) { imageView.setImageBitmap(bitmap) }
+            } catch (e: Exception) { /* logo is cosmetic — never crash */ }
+        }
+    }
+
+    // ── UPI app launch helpers ─────────────────────────────────────────
 
     private fun shareQrToGpay() {
         val qrBase64 = paymentData.qr_image
-        if (qrBase64.isBlank()) {
-            launchUpiApp(UpiIntentHelper.UpiApp.GOOGLE_PAY)
-            return
-        }
+        if (qrBase64.isBlank()) { launchUpiApp(UpiIntentHelper.UpiApp.GOOGLE_PAY); return }
         try {
             val base64Data = qrBase64.substringAfter("base64,")
             val bytes  = Base64.decode(base64Data, Base64.DEFAULT)
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
             val cacheFile = File(requireContext().cacheDir, "tez_qr_pay.png")
-            FileOutputStream(cacheFile).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
+            FileOutputStream(cacheFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
 
             val uri = FileProvider.getUriForFile(
                 requireContext(),
                 "${requireContext().packageName}.tezgateway.fileprovider",
                 cacheFile
             )
-
-            val intent = Intent(Intent.ACTION_SEND).apply {
+            startActivity(Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, uri)
                 setPackage("com.google.android.apps.nbu.paisa.user")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
             paymentLaunched = true
         } catch (e: Exception) {
             Toast.makeText(context, "Could not open Google Pay", Toast.LENGTH_SHORT).show()
@@ -321,8 +315,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun launchUpiApp(app: UpiIntentHelper.UpiApp) {
-        val success = UpiIntentHelper.startPaymentIntent(requireContext(), app, paymentData)
-        if (success) {
+        if (UpiIntentHelper.startPaymentIntent(requireContext(), app, paymentData)) {
             paymentLaunched = true
         } else {
             Toast.makeText(context, "${app.name} not available", Toast.LENGTH_SHORT).show()
@@ -332,8 +325,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     // ── State transitions ──────────────────────────────────────────────
 
     /**
-     * Switch from payment selection UI → status checking UI.
-     * Called in onResume after user returns from a UPI app.
+     * Switch to status checking UI.
+     * Called either in [onResume] (after UPI app intent) or directly from the "I've Paid" button.
      */
     private fun showCheckingState() {
         paymentSection.visibility  = View.GONE
@@ -346,9 +339,6 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         startElapsedTimer()
     }
 
-    /**
-     * Updates the timer text every second for up to 100 seconds.
-     */
     private fun startElapsedTimer() {
         timerJob?.cancel()
         timerJob = lifecycleScope.launch(Dispatchers.Main) {
@@ -358,20 +348,13 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 delay(1000)
                 elapsed++
             }
-            if (isActive) statusTimer.text = "Checking for ${StatusPollingService.TIMEOUT_SECONDS}s…"
+            if (isActive) statusTimer.text = "Checked for ${StatusPollingService.TIMEOUT_SECONDS}s"
         }
     }
 
-    /**
-     * Show the result card (success / failure / pending).
-     * Hides the spinner and Check Status button.
-     */
     private fun showResult(
-        iconText: String,
-        title: String,
-        subtitle: String,
-        cardBgColor: Int,
-        titleColor: Int
+        iconText: String, title: String, subtitle: String,
+        cardBgColor: Int, titleColor: Int
     ) {
         resultDelivered = true
         timerJob?.cancel()
@@ -381,20 +364,16 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         statusMessage.text        = ""
         statusTimer.text          = ""
 
-        resultIconText.text       = iconText
-        resultTitle.text          = title
+        resultIconText.text = iconText
+        resultTitle.text    = title
         resultTitle.setTextColor(titleColor)
-        resultSubtitle.text       = subtitle
+        resultSubtitle.text = subtitle
         resultCard.setBackgroundColor(cardBgColor)
-        resultCard.visibility     = View.VISIBLE
+        resultCard.visibility = View.VISIBLE
 
         btnCancel.text = "Close"
     }
 
-    /**
-     * Stop current polling and restart immediately.
-     * Used by the "Check Status Now" button.
-     */
     private fun retriggerStatusCheck() {
         pollingService?.stopPolling()
         statusMessage.text = "Rechecking payment status..."
@@ -411,13 +390,12 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             callback  = object : TezPaymentCallback {
                 override fun onPaymentSuccess(orderId: String, utr: String) {
                     showResult(
-                        iconText      = "✓",
-                        title         = "Payment Successful",
-                        subtitle      = if (utr.isNotBlank()) "UTR: $utr" else "Order: $orderId",
-                        cardBgColor   = 0xFFE8F5E9.toInt(),
-                        titleColor    = 0xFF2E7D32.toInt()
+                        iconText    = "✓",
+                        title       = "Payment Successful",
+                        subtitle    = if (utr.isNotBlank()) "UTR: $utr" else "Order: $orderId",
+                        cardBgColor = 0xFFE8F5E9.toInt(),
+                        titleColor  = 0xFF2E7D32.toInt()
                     )
-                    // Brief delay so user can see the success card, then deliver callback
                     lifecycleScope.launch {
                         delay(1800)
                         dismiss()
@@ -453,7 +431,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         pollingService?.startPolling(lifecycleScope)
     }
 
-    /** When user comes back from UPI app, show checking state and start polling. */
+    /** After returning from a UPI app intent, start polling automatically. */
     override fun onResume() {
         super.onResume()
         if (paymentLaunched && !resultDelivered) {
