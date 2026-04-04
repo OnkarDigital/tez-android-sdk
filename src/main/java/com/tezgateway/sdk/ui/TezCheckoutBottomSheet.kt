@@ -217,11 +217,13 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         ) { launchUpiApp(UpiIntentHelper.UpiApp.BHIM) }
 
         setupUpiButton(v, R.id.btn_amazonpay,
-            enabled = UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.AMAZON_PAY)
+            enabled = settings.show_amazonpay &&
+                      UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.AMAZON_PAY)
         ) { launchUpiApp(UpiIntentHelper.UpiApp.AMAZON_PAY) }
 
         setupUpiButton(v, R.id.btn_cred,
-            enabled = UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.CRED)
+            enabled = settings.show_cred &&
+                      UpiIntentHelper.isAppInstalled(ctx, UpiIntentHelper.UpiApp.CRED)
         ) { launchUpiApp(UpiIntentHelper.UpiApp.CRED) }
 
         // Apply text color override on dark body backgrounds

@@ -85,6 +85,8 @@ data class CheckoutSettings(
     val Show_GpayButton: Boolean = true,
     val show_phonepe: Boolean = true,
     val show_phonepe_intent: Boolean = true,
+    val show_amazonpay: Boolean = true,
+    val show_cred: Boolean = true,
     val headerColor: String = "#c800b2",
     val bodyColor: String = "#ffffff",
     val display_header_footer: Boolean = true,
