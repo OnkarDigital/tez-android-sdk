@@ -1,272 +1,445 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    TezGateway SDK - Native Payment BottomSheet Layout
-    Header color is applied programmatically from merchant's CheckoutSettings.headerColor
+    TezGateway SDK — Native Payment BottomSheet Layout
+    Header color applied programmatically from CheckoutSettings.headerColor
+    "Powered by TezGateway" badge hidden when remove_branding = true
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@android:color/white">
+    android:background="#FFFFFF">
 
-    <!-- ── HEADER BAR (color set dynamically from settings.headerColor) ── -->
+    <!-- ── DRAG HANDLE ── -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="6dp"
+        android:background="#E0E0E0"
+        android:backgroundTint="#E0E0E0" />
+
+    <!-- ── HEADER BAR (color set from settings.headerColor) ── -->
     <LinearLayout
         android:id="@+id/tez_header_bar"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="64dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="20dp"
         android:paddingEnd="16dp"
         android:background="#c800b2">
 
-        <TextView
+        <!-- Title + subtitle stacked -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="💳 Select Payment Method"
-            android:textColor="#FFFFFF"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:orientation="vertical">
 
-        <!-- Powered by badge (hidden if remove_branding = true) -->
-        <TextView
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Complete Your Payment"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.01" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Secure  ·  Fast  ·  Native UPI"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:alpha="0.65"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Powered by TezGateway badge — hidden when remove_branding = true -->
+        <LinearLayout
             android:id="@+id/tez_branding_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TEZ"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:alpha="0.7" />
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Powered by"
+                android:textColor="#FFFFFF"
+                android:textSize="8sp"
+                android:alpha="0.6"
+                android:gravity="end" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TezGateway"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:alpha="0.85"
+                android:gravity="end" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- ── MAIN CONTENT ── -->
+    <!-- ── SCROLLABLE BODY ── -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fillViewport="true">
+        android:layout_height="wrap_content">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="8dp">
 
-            <!-- Amount displayed (set programmatically) -->
-            <TextView
-                android:id="@+id/tez_amount_label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:textSize="26sp"
-                android:textStyle="bold"
-                android:textColor="#1a1a1a"
-                android:layout_marginBottom="4dp"
-                tools:text="₹500.00" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="Choose a payment method"
-                android:textSize="13sp"
-                android:textColor="#888888"
-                android:layout_marginBottom="20dp" />
-
-            <!-- ── UPI APP BUTTONS GRID ── -->
-            <GridLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:columnCount="3"
-                android:useDefaultMargins="true"
-                android:layout_marginBottom="8dp">
-
-                <!-- Google Pay -->
-                <Button
-                    android:id="@+id/btn_gpay"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="6dp"
-                    android:text="Google Pay"
-                    android:textSize="12sp"
-                    android:backgroundTint="#1a73e8"
-                    android:textColor="#FFFFFF"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp"
-                    app:icon="@drawable/ic_gpay"
-                    app:iconGravity="top"
-                    app:iconTint="#FFFFFF"
-                    app:iconSize="20dp"
-                    app:iconPadding="4dp" />
-
-                <!-- PhonePe -->
-                <Button
-                    android:id="@+id/btn_phonepe"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="6dp"
-                    android:text="PhonePe"
-                    android:textSize="12sp"
-                    android:backgroundTint="#5f259f"
-                    android:textColor="#FFFFFF"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp"
-                    app:icon="@drawable/ic_phonepe"
-                    app:iconGravity="top"
-                    app:iconTint="#FFFFFF"
-                    app:iconSize="20dp"
-                    app:iconPadding="4dp" />
-
-                <!-- Paytm -->
-                <Button
-                    android:id="@+id/btn_paytm"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="6dp"
-                    android:text="Paytm"
-                    android:textSize="12sp"
-                    android:backgroundTint="#00BAF2"
-                    android:textColor="#FFFFFF"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp"
-                    app:icon="@drawable/ic_paytm"
-                    app:iconGravity="top"
-                    app:iconTint="#FFFFFF"
-                    app:iconSize="20dp"
-                    app:iconPadding="4dp" />
-
-                <!-- BHIM UPI -->
-                <Button
-                    android:id="@+id/btn_bhim"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="6dp"
-                    android:text="BHIM UPI"
-                    android:textSize="12sp"
-                    android:backgroundTint="#00529a"
-                    android:textColor="#FFFFFF"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp"
-                    app:icon="@drawable/ic_bhim"
-                    app:iconGravity="top"
-                    app:iconTint="#FFFFFF"
-                    app:iconSize="20dp"
-                    app:iconPadding="4dp" />
-
-                <!-- Amazon Pay -->
-                <Button
-                    android:id="@+id/btn_amazonpay"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="6dp"
-                    android:text="Amazon Pay"
-                    android:textSize="12sp"
-                    android:backgroundTint="#FF9900"
-                    android:textColor="#FFFFFF"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp"
-                    app:icon="@drawable/ic_amazonpay"
-                    app:iconGravity="top"
-                    app:iconTint="#FFFFFF"
-                    app:iconSize="20dp"
-                    app:iconPadding="4dp" />
-
-                <!-- CRED -->
-                <Button
-                    android:id="@+id/btn_cred"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="6dp"
-                    android:text="CRED"
-                    android:textSize="12sp"
-                    android:backgroundTint="#1c1c1e"
-                    android:textColor="#FFFFFF"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp"
-                    app:icon="@drawable/ic_cred"
-                    app:iconGravity="top"
-                    app:iconTint="#FFFFFF"
-                    app:iconSize="20dp"
-                    app:iconPadding="4dp" />
-            </GridLayout>
-
-            <!-- ── DIVIDER ── -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#f0f0f0"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp" />
-
-            <!-- ── QR CODE SECTION (shown if settings.show_qr = true) ── -->
+            <!-- ══════════════════════════════════════════
+                 PAYMENT SELECTION SECTION (initial state)
+                 Hides when user launches a UPI app
+             ══════════════════════════════════════════ -->
             <LinearLayout
-                android:id="@+id/tez_qr_section"
+                android:id="@+id/tez_payment_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Amount -->
+                <TextView
+                    android:id="@+id/tez_amount_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:textColor="#111111"
+                    android:layout_marginBottom="3dp"
+                    tools:text="₹500.00" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Select a payment method below"
+                    android:textSize="13sp"
+                    android:textColor="#888888"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- ── UPI APP BUTTONS GRID ── -->
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="3"
+                    android:useDefaultMargins="false"
+                    android:layout_marginBottom="4dp">
+
+                    <Button
+                        android:id="@+id/btn_gpay"
+                        android:layout_width="0dp"
+                        android:layout_height="72dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="5dp"
+                        android:text="Google Pay"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:backgroundTint="#1a73e8"
+                        android:textColor="#FFFFFF"
+                        android:visibility="gone"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_gpay"
+                        app:iconGravity="top"
+                        app:iconTint="@null"
+                        app:iconSize="24dp"
+                        app:iconPadding="3dp" />
+
+                    <Button
+                        android:id="@+id/btn_phonepe"
+                        android:layout_width="0dp"
+                        android:layout_height="72dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="5dp"
+                        android:text="PhonePe"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:backgroundTint="#5f259f"
+                        android:textColor="#FFFFFF"
+                        android:visibility="gone"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_phonepe"
+                        app:iconGravity="top"
+                        app:iconTint="@null"
+                        app:iconSize="24dp"
+                        app:iconPadding="3dp" />
+
+                    <Button
+                        android:id="@+id/btn_paytm"
+                        android:layout_width="0dp"
+                        android:layout_height="72dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="5dp"
+                        android:text="Paytm"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:backgroundTint="#00BAF2"
+                        android:textColor="#FFFFFF"
+                        android:visibility="gone"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_paytm"
+                        app:iconGravity="top"
+                        app:iconTint="@null"
+                        app:iconSize="24dp"
+                        app:iconPadding="3dp" />
+
+                    <Button
+                        android:id="@+id/btn_bhim"
+                        android:layout_width="0dp"
+                        android:layout_height="72dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="5dp"
+                        android:text="BHIM UPI"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:backgroundTint="#00529a"
+                        android:textColor="#FFFFFF"
+                        android:visibility="gone"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_bhim"
+                        app:iconGravity="top"
+                        app:iconTint="@null"
+                        app:iconSize="24dp"
+                        app:iconPadding="3dp" />
+
+                    <Button
+                        android:id="@+id/btn_amazonpay"
+                        android:layout_width="0dp"
+                        android:layout_height="72dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="5dp"
+                        android:text="Amazon Pay"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:backgroundTint="#FF9900"
+                        android:textColor="#FFFFFF"
+                        android:visibility="gone"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_amazonpay"
+                        app:iconGravity="top"
+                        app:iconTint="@null"
+                        app:iconSize="24dp"
+                        app:iconPadding="3dp" />
+
+                    <Button
+                        android:id="@+id/btn_cred"
+                        android:layout_width="0dp"
+                        android:layout_height="72dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="5dp"
+                        android:text="CRED"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:backgroundTint="#1c1c1e"
+                        android:textColor="#FFFFFF"
+                        android:visibility="gone"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_cred"
+                        app:iconGravity="top"
+                        app:iconTint="@null"
+                        app:iconSize="24dp"
+                        app:iconPadding="3dp" />
+                </GridLayout>
+
+                <!-- ── DIVIDER ── -->
+                <View
+                    android:id="@+id/tez_qr_divider"
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#F0F0F0"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone" />
+
+                <!-- ── QR CODE SECTION ── -->
+                <LinearLayout
+                    android:id="@+id/tez_qr_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Or scan QR to pay"
+                        android:textSize="13sp"
+                        android:textColor="#555555"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- QR image (base64 decoded programmatically) -->
+                    <ImageView
+                        android:id="@+id/tez_qr_image"
+                        android:layout_width="200dp"
+                        android:layout_height="200dp"
+                        android:scaleType="fitCenter"
+                        android:background="#F8F8F8"
+                        android:padding="10dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Open any UPI app and scan this QR code"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:gravity="center"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="4dp" />
+                </LinearLayout>
+
+            </LinearLayout>
+            <!-- end tez_payment_section -->
+
+            <!-- ══════════════════════════════════════════
+                 STATUS CHECKING SECTION
+                 Shown after user returns from UPI app
+                 Hidden until paymentLaunched = true
+             ══════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/tez_checking_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:visibility="gone">
+                android:visibility="gone"
+                android:paddingTop="16dp"
+                android:paddingBottom="8dp">
 
+                <!-- Spinner (hidden once result arrives) -->
+                <ProgressBar
+                    android:id="@+id/tez_status_spinner"
+                    style="@android:style/Widget.ProgressBar.Large"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:indeterminateTint="#c800b2"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Status message -->
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:id="@+id/tez_status_message"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📷 Scan QR to Pay"
-                    android:textSize="14sp"
-                    android:textColor="#444444"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="12dp" />
-
-                <!-- QR image — set programmatically from base64 qr_image -->
-                <ImageView
-                    android:id="@+id/tez_qr_image"
-                    android:layout_width="200dp"
-                    android:layout_height="200dp"
-                    android:scaleType="fitCenter"
-                    android:background="#f9f9f9"
-                    android:padding="8dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Open any UPI app and scan this QR"
-                    android:textSize="12sp"
-                    android:textColor="#888888"
                     android:gravity="center"
-                    android:layout_marginTop="8dp" />
-            </LinearLayout>
+                    android:text="Verifying your payment..."
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#1a1a1a"
+                    android:layout_marginBottom="6dp" />
 
-            <!-- ── CANCEL BUTTON ── -->
+                <!-- Elapsed timer -->
+                <TextView
+                    android:id="@+id/tez_status_timer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Checking... 0s"
+                    android:textSize="13sp"
+                    android:textColor="#888888"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Result card (hidden until SUCCESS / FAILURE / PENDING determined) -->
+                <LinearLayout
+                    android:id="@+id/tez_result_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="20dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/tez_result_card_bg"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tez_result_icon_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="48sp"
+                        android:layout_marginBottom="8dp"
+                        tools:text="✓" />
+
+                    <TextView
+                        android:id="@+id/tez_result_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:gravity="center"
+                        android:layout_marginBottom="4dp"
+                        tools:text="Payment Successful!" />
+
+                    <TextView
+                        android:id="@+id/tez_result_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:gravity="center"
+                        android:textColor="#555555"
+                        tools:text="UTR: 123456789012" />
+                </LinearLayout>
+
+                <!-- Check Status Now button (outlined, visible while checking) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_check_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Check Status Now"
+                    android:textSize="14sp"
+                    android:textAllCaps="false"
+                    android:textColor="#c800b2"
+                    app:strokeColor="#c800b2"
+                    app:strokeWidth="1.5dp"
+                    app:cornerRadius="12dp"
+                    app:backgroundTint="@android:color/transparent"
+                    android:layout_marginBottom="8dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+            </LinearLayout>
+            <!-- end tez_checking_section -->
+
+            <!-- ── CANCEL / DISMISS BUTTON ── -->
             <Button
                 android:id="@+id/btn_cancel"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
                 android:text="Cancel Payment"
+                android:textAllCaps="false"
                 android:textColor="#ef4444"
-                android:backgroundTint="#fff0f0"
-                app:cornerRadius="10dp"
+                android:backgroundTint="#FFF0F0"
+                app:cornerRadius="12dp"
                 android:textSize="14sp" />
+
         </LinearLayout>
     </ScrollView>
 
-    <!-- ── NEWS TICKER (shown only if settings.news is not blank) ── -->
+    <!-- ── NEWS TICKER (visible only when settings.news is not blank) ── -->
     <TextView
         android:id="@+id/tez_news_ticker"
         android:layout_width="match_parent"
         android:layout_height="36dp"
         android:gravity="center_vertical"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:background="#fff3cd"
-        android:textColor="#856404"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:background="#FFF8E1"
+        android:textColor="#795548"
         android:textSize="12sp"
         android:singleLine="true"
         android:ellipsize="marquee"
