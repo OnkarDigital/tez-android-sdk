@@ -49,6 +49,8 @@ internal object SettingsClient {
             Show_GpayButton     = s.optBoolean("Show_GpayButton", true),
             show_phonepe        = s.optBoolean("show_phonepe", true),
             show_phonepe_intent = s.optBoolean("show_phonepe_intent", true),
+            show_amazonpay      = s.optBoolean("show_amazonpay", false),
+            show_cred           = s.optBoolean("show_cred", false),
             headerColor         = s.optString("headerColor", "#c800b2"),
             bodyColor           = s.optString("bodyColor", "#ffffff"),
             display_header_footer   = s.optBoolean("display_header_footer", true),

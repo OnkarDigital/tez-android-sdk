@@ -183,14 +183,14 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             if (settings.remove_branding) View.GONE else View.VISIBLE
 
         // ── News ticker ───────────────────────────────────────────────
-        v.findViewById<TextView>(R.id.tez_news_ticker).let { ticker ->
-            if (settings.news.isNotBlank()) {
-                ticker.text       = settings.news
-                ticker.isSelected = true
-                ticker.visibility = View.VISIBLE
-            } else {
-                ticker.visibility = View.GONE
-            }
+        val tickerContainer = v.findViewById<View>(R.id.tez_news_ticker_container)
+        val tickerText      = v.findViewById<TextView>(R.id.tez_news_ticker)
+        if (settings.news.isNotBlank()) {
+            tickerText.text       = settings.news
+            tickerText.isSelected = true
+            tickerContainer.visibility = View.VISIBLE
+        } else {
+            tickerContainer.visibility = View.GONE
         }
 
         // ── UPI buttons ───────────────────────────────────────────────
