@@ -1,5 +1,7 @@
 # TezGateway Android SDK 🚀
 
+[![](https://jitpack.io/v/OnkarDigital/tez-android-sdk.svg)](https://jitpack.io/#OnkarDigital/tez-android-sdk)
+
 A native Android SDK for integrating TezGateway UPI payment gateway — **no WebView, no Custom Tabs, pure native Android Intents.**
 
 ## Features
