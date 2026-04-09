@@ -318,11 +318,15 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     private fun shareQrToGpay() {
         val qrBase64 = paymentData.qr_image
-        if (qrBase64.isBlank()) { launchUpiApp(UpiIntentHelper.UpiApp.GOOGLE_PAY); return }
+        if (qrBase64.isBlank()) {
+            toast("QR code not available")
+            return
+        }
         try {
             val base64Data = qrBase64.substringAfter("base64,")
             val bytes  = Base64.decode(base64Data, Base64.DEFAULT)
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                ?: run { toast("Failed to decode QR image"); return }
 
             val cacheFile = File(requireContext().cacheDir, "tez_qr_pay.png")
             FileOutputStream(cacheFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -332,17 +336,32 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 "${requireContext().packageName}.tezgateway.fileprovider",
                 cacheFile
             )
-            startActivity(Intent(Intent.ACTION_SEND).apply {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, uri)
                 setPackage("com.google.android.apps.nbu.paisa.user")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-            })
-            paymentLaunched = true
+            }
+
+            val canHandle = requireContext().packageManager
+                .queryIntentActivities(shareIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                .isNotEmpty()
+
+            if (canHandle) {
+                startActivity(shareIntent)
+                paymentLaunched = true
+            } else {
+                toast("Google Pay does not support QR sharing on this version")
+            }
+        } catch (e: IllegalArgumentException) {
+            toast("FileProvider not configured: ${e.message}")
         } catch (e: Exception) {
-            Toast.makeText(context, "Could not open Google Pay", Toast.LENGTH_SHORT).show()
+            toast("Could not open Google Pay: ${e.message}")
         }
     }
+
+    private fun toast(msg: String) =
+        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
 
     private fun launchUpiApp(app: UpiIntentHelper.UpiApp) {
         if (UpiIntentHelper.startPaymentIntent(requireContext(), app, paymentData)) {
@@ -426,6 +445,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                         cardBgColor = 0xFFE8F5E9.toInt(),
                         titleColor  = 0xFF2E7D32.toInt()
                     )
+                    btnCancel.visibility = View.GONE
                     lifecycleScope.launch {
                         delay(1800)
                         dismiss()
