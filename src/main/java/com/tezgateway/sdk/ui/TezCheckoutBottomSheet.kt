@@ -18,6 +18,7 @@ import com.tezgateway.sdk.R
 import com.tezgateway.sdk.interfaces.TezPaymentCallback
 import com.tezgateway.sdk.models.CheckoutSettings
 import com.tezgateway.sdk.models.PaymentData
+import com.tezgateway.sdk.network.SettingsClient
 import com.tezgateway.sdk.network.StatusPollingService
 import com.tezgateway.sdk.utils.UpiIntentHelper
 import kotlinx.coroutines.*
@@ -276,6 +277,10 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             } else {
                 pollingService?.stopPolling()
                 timerJob?.cancel()
+                // Fire-and-forget: mark order as cancelled on server (status=FAILURE, utr=user_cancelled)
+                lifecycleScope.launch(Dispatchers.IO) {
+                    SettingsClient.cancelOrder(baseUrl, userToken, orderId)
+                }
                 callback.onPaymentFailed(orderId, "User cancelled")
                 dismiss()
             }

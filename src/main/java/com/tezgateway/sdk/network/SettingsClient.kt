@@ -20,12 +20,14 @@ internal object SettingsClient {
 
     /**
      * Blocking call — must be called from a background thread (IO Dispatcher).
+     * @param orderId Optional — when provided, server computes show_phonepe dynamically
+     *                based on the order's payment method and Paytm cookie state.
      * @throws Exception if network fails (caller should handle and use defaults)
      */
-    fun fetchSettings(baseUrl: String, userToken: String): CheckoutSettings {
-        val body = FormBody.Builder()
-            .add("user_token", userToken)
-            .build()
+    fun fetchSettings(baseUrl: String, userToken: String, orderId: String = ""): CheckoutSettings {
+        val bodyBuilder = FormBody.Builder().add("user_token", userToken)
+        if (orderId.isNotBlank()) bodyBuilder.add("order_id", orderId)
+        val body = bodyBuilder.build()
 
         val request = Request.Builder()
             .url("${baseUrl.trimEnd('/')}/api/get_checkout_settings.php")
@@ -58,5 +60,23 @@ internal object SettingsClient {
             news                = s.optString("news", ""),
             phonepe_default_lang = s.optString("phonepe_default_lang", "hi")
         )
+    }
+
+    /**
+     * Cancels a PENDING order on the server.
+     * Blocking — call from a background thread. Safe to fire-and-forget (swallows exceptions).
+     */
+    fun cancelOrder(baseUrl: String, userToken: String, orderId: String) {
+        try {
+            val body = FormBody.Builder()
+                .add("user_token", userToken)
+                .add("order_id", orderId)
+                .build()
+            val request = Request.Builder()
+                .url("${baseUrl.trimEnd('/')}/api/cancel_order.php")
+                .post(body)
+                .build()
+            client.newCall(request).execute().close()
+        } catch (_: Exception) { /* best-effort — never crash the SDK */ }
     }
 }

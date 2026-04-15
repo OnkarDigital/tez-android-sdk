@@ -59,7 +59,7 @@ object TezGateway {
         // Fetch merchant's UI settings from get_checkout_settings.php then show UI
         CoroutineScope(Dispatchers.IO).launch {
             val settings: CheckoutSettings = try {
-                SettingsClient.fetchSettings(baseUrl, userToken)
+                SettingsClient.fetchSettings(baseUrl, userToken, orderId)
             } catch (e: Exception) {
                 // Use safe defaults if fetch fails — SDK should never crash the host app
                 CheckoutSettings(
