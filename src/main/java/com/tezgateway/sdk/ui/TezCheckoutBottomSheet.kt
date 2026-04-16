@@ -327,41 +327,62 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             toast("QR code not available")
             return
         }
-        try {
-            val base64Data = qrBase64.substringAfter("base64,")
-            val bytes  = Base64.decode(base64Data, Base64.DEFAULT)
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                ?: run { toast("Failed to decode QR image"); return }
 
-            val cacheFile = File(requireContext().cacheDir, "tez_qr_pay.png")
-            FileOutputStream(cacheFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // Decode + write on IO thread to avoid ANR on slow devices
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val base64Data = qrBase64.substringAfter("base64,")
+                val bytes  = Base64.decode(base64Data, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    ?: run { withContext(Dispatchers.Main) { toast("Failed to decode QR image") }; return@launch }
 
-            val uri = FileProvider.getUriForFile(
-                requireContext(),
-                "${requireContext().packageName}.tezgateway.fileprovider",
-                cacheFile
-            )
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                setPackage("com.google.android.apps.nbu.paisa.user")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                // Delete any leftover tez_qr_*.png files from previous orders
+                requireContext().cacheDir
+                    .listFiles { f -> f.name.startsWith("tez_qr_") && f.name.endsWith(".png") }
+                    ?.forEach { it.delete() }
+
+                // Unique filename per order — never serve a stale cached QR
+                val cacheFile = File(requireContext().cacheDir, "tez_qr_${orderId}.png")
+                FileOutputStream(cacheFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+
+                val ctx       = requireContext()
+                val authority = "${ctx.packageName}.tezgateway.fileprovider"
+                val uri       = FileProvider.getUriForFile(ctx, authority, cacheFile)
+
+                // Explicitly grant read permission to GPay's package — required on many
+                // Android versions even when FLAG_GRANT_READ_URI_PERMISSION is set on the intent
+                ctx.grantUriPermission(
+                    "com.google.android.apps.nbu.paisa.user",
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    // ClipData is required on Android 6+ for the URI permission grant to
+                    // propagate to the receiving app — without this GPay opens but can't
+                    // read the image (blank / permission-denied crash inside GPay)
+                    clipData = android.content.ClipData.newRawUri("QR Code", uri)
+                    setPackage("com.google.android.apps.nbu.paisa.user")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    // No FLAG_ACTIVITY_NEW_TASK — Fragment.startActivity() uses the host
+                    // activity's task, which is correct and avoids task-stack side-effects
+                }
+
+                withContext(Dispatchers.Main) {
+                    try {
+                        startActivity(shareIntent)
+                        paymentLaunched = true
+                    } catch (e: android.content.ActivityNotFoundException) {
+                        toast("Google Pay not installed")
+                    }
+                }
+            } catch (e: IllegalArgumentException) {
+                withContext(Dispatchers.Main) { toast("FileProvider error: ${e.message}") }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { toast("Could not open Google Pay: ${e.message}") }
             }
-
-            val canHandle = requireContext().packageManager
-                .queryIntentActivities(shareIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-                .isNotEmpty()
-
-            if (canHandle) {
-                startActivity(shareIntent)
-                paymentLaunched = true
-            } else {
-                toast("Google Pay does not support QR sharing on this version")
-            }
-        } catch (e: IllegalArgumentException) {
-            toast("FileProvider not configured: ${e.message}")
-        } catch (e: Exception) {
-            toast("Could not open Google Pay: ${e.message}")
         }
     }
 
