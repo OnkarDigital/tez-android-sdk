@@ -274,15 +274,32 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         btnCancel.setOnClickListener {
             if (resultDelivered) {
                 dismiss()
-            } else {
-                pollingService?.stopPolling()
-                timerJob?.cancel()
-                // Fire-and-forget: mark order as cancelled on server (status=FAILURE, utr=user_cancelled)
-                lifecycleScope.launch(Dispatchers.IO) {
-                    SettingsClient.cancelOrder(baseUrl, userToken, orderId)
+                return@setOnClickListener
+            }
+            pollingService?.stopPolling()
+            timerJob?.cancel()
+
+            // Disable button while cancel API is in-flight
+            btnCancel.isEnabled = false
+            btnCancel.text = "Cancelling..."
+
+            // Standalone scope — lifecycleScope gets cancelled by dismiss() before HTTP call completes
+            CoroutineScope(Dispatchers.IO).launch {
+                val cancelled = SettingsClient.cancelOrder(baseUrl, userToken, orderId)
+                withContext(Dispatchers.Main) {
+                    if (!isAdded) return@withContext
+                    if (cancelled) {
+                        // Server confirmed cancellation
+                        callback.onPaymentFailed(orderId, "User cancelled")
+                        dismiss()
+                    } else {
+                        // Cancel failed — order may already be settled, recheck status
+                        btnCancel.isEnabled = true
+                        btnCancel.text = "Close"
+                        showCheckingState()
+                        startPolling()
+                    }
                 }
-                callback.onPaymentFailed(orderId, "User cancelled")
-                dismiss()
             }
         }
 

@@ -64,10 +64,11 @@ internal object SettingsClient {
 
     /**
      * Cancels a PENDING order on the server.
-     * Blocking — call from a background thread. Safe to fire-and-forget (swallows exceptions).
+     * Blocking — call from a background thread.
+     * @return true if server confirmed cancellation, false if already settled / error.
      */
-    fun cancelOrder(baseUrl: String, userToken: String, orderId: String) {
-        try {
+    fun cancelOrder(baseUrl: String, userToken: String, orderId: String): Boolean {
+        return try {
             val body = FormBody.Builder()
                 .add("user_token", userToken)
                 .add("order_id", orderId)
@@ -76,7 +77,8 @@ internal object SettingsClient {
                 .url("${baseUrl.trimEnd('/')}/api/cancel_order.php")
                 .post(body)
                 .build()
-            client.newCall(request).execute().close()
-        } catch (_: Exception) { /* best-effort — never crash the SDK */ }
+            val responseBody = client.newCall(request).execute().body?.string() ?: return false
+            JSONObject(responseBody).optBoolean("status", false)
+        } catch (_: Exception) { false }
     }
 }
