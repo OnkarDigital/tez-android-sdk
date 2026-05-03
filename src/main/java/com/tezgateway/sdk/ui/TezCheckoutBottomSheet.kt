@@ -276,6 +276,15 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 dismiss()
                 return@setOnClickListener
             }
+            
+            if (btnCancel.text.toString().equals("I'll Check Later", ignoreCase = true)) {
+                pollingService?.stopPolling()
+                timerJob?.cancel()
+                callback.onPaymentPending(orderId)
+                dismiss()
+                return@setOnClickListener
+            }
+
             pollingService?.stopPolling()
             timerJob?.cancel()
 
