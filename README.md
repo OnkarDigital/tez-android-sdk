@@ -182,4 +182,4 @@ Configure your Webhook URL in the TezGateway merchant panel. When a payment sett
 
 ---
 
-*TezGateway Android SDK · v1.0.9*
+*TezGateway Android SDK · v1.0.20*
