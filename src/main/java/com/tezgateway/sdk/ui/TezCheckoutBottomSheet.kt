@@ -103,7 +103,24 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View = inflater.inflate(R.layout.bottomsheet_tez_checkout, container, false)
+    ): View {
+        val currentSettings = pendingSettings ?: CheckoutSettings()
+        val themeId = if (currentSettings.theme in 1..4) currentSettings.theme else 1
+        val layoutRes = when (themeId) {
+            2 -> R.layout.bottomsheet_tez_checkout_theme2
+            3 -> R.layout.bottomsheet_tez_checkout_theme3
+            4 -> R.layout.bottomsheet_tez_checkout_theme4
+            else -> R.layout.bottomsheet_tez_checkout
+        }
+        return inflater.inflate(layoutRes, container, false)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.apply {
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         paymentData = pendingPaymentData ?: run { dismiss(); return }
@@ -143,7 +160,11 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         val headerColor = try { Color.parseColor(settings.headerColor) }
                           catch (e: Exception) { Color.parseColor("#c800b2") }
 
-        v.findViewById<View>(R.id.tez_header_bar).setBackgroundColor(headerColor)
+        val bodyColor = try { Color.parseColor(settings.bodyColor) }
+                        catch (e: Exception) { Color.WHITE }
+
+        val themeId = if (settings.theme in 1..4) settings.theme else 1
+        applyTheme(v, themeId, headerColor, bodyColor)
 
         // ── Amount card ───────────────────────────────────────────────
         if (paymentData.amount.isBlank()) {
@@ -154,8 +175,6 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         }
 
         // ── UPI button text color: contrast against body color ────────
-        val bodyColor = try { Color.parseColor(settings.bodyColor) }
-                        catch (e: Exception) { Color.WHITE }
         val bodyLuminance = (0.299 * Color.red(bodyColor) +
                             0.587 * Color.green(bodyColor) +
                             0.114 * Color.blue(bodyColor)) / 255.0
@@ -174,8 +193,10 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             val csl = android.content.res.ColorStateList.valueOf(headerColor)
             v.findViewById<com.google.android.material.button.MaterialButton>(
                 R.id.btn_check_status).apply {
-                strokeColor = csl
-                setTextColor(headerColor)
+                if (themeId != 3) {
+                    strokeColor = csl
+                    setTextColor(headerColor)
+                }
             }
         } catch (e: Exception) { /* keep default */ }
 
@@ -253,8 +274,10 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 orDivider.visibility = View.VISIBLE
 
                 // Tint the "I've Paid" button to match the merchant's header color
-                btnQrPaid.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(headerColor)
+                if (themeId == 1 || themeId == 2) {
+                    btnQrPaid.backgroundTintList =
+                        android.content.res.ColorStateList.valueOf(headerColor)
+                }
 
                 // ── QR BUG FIX: tap "I've Paid" → directly start status polling ──
                 btnQrPaid.setOnClickListener {
@@ -467,11 +490,52 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
         resultIconText.text = iconText
         resultTitle.text    = title
-        resultTitle.setTextColor(titleColor)
         resultSubtitle.text = subtitle
-        resultCard.setBackgroundColor(cardBgColor)
-        resultCard.visibility = View.VISIBLE
 
+        val themeId = if (settings.theme in 1..4) settings.theme else 1
+        when (themeId) {
+            2 -> {
+                // Theme 2: Dark Cyberpunk
+                val (bg, stroke, text) = when (iconText) {
+                    "✓" -> Triple(0xFF152B1E.toInt(), 0xFF2E7D32.toInt(), 0xFF4ADE80.toInt())
+                    "✗" -> Triple(0xFF2D1C1C.toInt(), 0xFFEF4444.toInt(), 0xFFFCA5A5.toInt())
+                    else -> Triple(0xFF2E251E.toInt(), 0xFFE65100.toInt(), 0xFFFDBA74.toInt())
+                }
+                setRoundedBackground(resultCard, bg, stroke, 1f, 16f)
+                resultTitle.setTextColor(text)
+                resultSubtitle.setTextColor(0xFF8E8EA8.toInt())
+            }
+            3 -> {
+                // Theme 3: Neo-Brutalism
+                val text = when (iconText) {
+                    "✓" -> 0xFF2E7D32.toInt()
+                    "✗" -> 0xFFC62828.toInt()
+                    else -> 0xFFE65100.toInt()
+                }
+                setRoundedBackground(resultCard, Color.WHITE, Color.BLACK, 2.5f, 8f)
+                resultTitle.setTextColor(text)
+                resultSubtitle.setTextColor(Color.BLACK)
+            }
+            4 -> {
+                // Theme 4: Royal Gold
+                val text = when (iconText) {
+                    "✓" -> 0xFFE6C280.toInt()
+                    "✗" -> 0xFFEF4444.toInt()
+                    else -> 0xFFE6C280.toInt()
+                }
+                setRoundedBackground(resultCard, 0xFF1D1916.toInt(), 0xFFD4AF37.toInt(), 1f, 16f)
+                resultTitle.setTextColor(text)
+                resultSubtitle.setTextColor(0xFF8C7D70.toInt())
+            }
+            else -> {
+                // Theme 1: Classic
+                resultCard.setBackgroundColor(cardBgColor)
+                resultTitle.setTextColor(titleColor)
+                resultSubtitle.setTextColor(0xFF555555.toInt())
+            }
+        }
+
+        resultCard.visibility = View.VISIBLE
         btnCancel.text = "Close"
     }
 
@@ -547,5 +611,469 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         super.onDestroyView()
         pollingService?.stopPolling()
         timerJob?.cancel()
+    }
+
+    private fun applyTheme(v: View, themeId: Int, headerColor: Int, bodyColor: Int) {
+        val root = v.findViewById<View>(R.id.tez_bottom_sheet_root)
+        val dragHandle = v.findViewById<View>(R.id.tez_drag_handle)
+        val headerBar = v.findViewById<View>(R.id.tez_header_bar)
+        val headerTitle = v.findViewById<TextView>(R.id.tez_header_title)
+        val headerSubtitle = v.findViewById<TextView>(R.id.tez_header_subtitle)
+        val amountSection = v.findViewById<View>(R.id.tez_amount_section)
+        val amountLabelTitle = v.findViewById<TextView>(R.id.tez_amount_label_title)
+        val amountLabel = v.findViewById<TextView>(R.id.tez_amount_label)
+        val payUpiTitle = v.findViewById<TextView>(R.id.tez_pay_upi_title)
+        val trustRow = v.findViewById<LinearLayout>(R.id.tez_trust_row)
+        val qrSection = v.findViewById<View>(R.id.tez_qr_section)
+        val qrDescription = v.findViewById<TextView>(R.id.tez_qr_description)
+        val btnQrPaid = v.findViewById<Button>(R.id.btn_qr_paid)
+        val checkingSection = v.findViewById<View>(R.id.tez_checking_section)
+        val statusMessage = v.findViewById<TextView>(R.id.tez_status_message)
+        val statusTimer = v.findViewById<TextView>(R.id.tez_status_timer)
+        val btnCheckStatus = v.findViewById<Button>(R.id.btn_check_status)
+        val btnCancel = v.findViewById<Button>(R.id.btn_cancel)
+
+        when (themeId) {
+            1 -> {
+                root?.setBackgroundColor(bodyColor)
+                headerBar?.setBackgroundColor(headerColor)
+                headerTitle?.setTextColor(Color.WHITE)
+                headerSubtitle?.setTextColor(0xCCFFFFFF.toInt())
+                
+                if (amountSection != null) {
+                    setGradientBackground(
+                        view = amountSection,
+                        startColor = 0xFFF7E6FF.toInt(),
+                        endColor = 0xFFFDFAFF.toInt(),
+                        orientation = android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                        strokeColor = 0xFFDDB8FF.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 20f
+                    )
+                }
+                amountLabelTitle?.setTextColor(0xFF9E00A0.toInt())
+                amountLabel?.setTextColor(0xFF1A0030.toInt())
+                payUpiTitle?.setTextColor(0xFF888888.toInt())
+                
+                if (trustRow != null) {
+                    setRoundedBackground(
+                        view = trustRow,
+                        bgColor = 0xFFF6FBF7.toInt(),
+                        strokeColor = 0xFFE0F2E9.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 10f
+                    )
+                    for (i in 0 until trustRow.childCount) {
+                        val child = trustRow.getChildAt(i)
+                        if (child is TextView) {
+                            if (child.text.toString().contains("·")) {
+                                child.setTextColor(0xFFA5D6A7.toInt())
+                            } else {
+                                child.setTextColor(0xFF2E7D32.toInt())
+                            }
+                        }
+                    }
+                }
+                
+                if (qrSection != null) {
+                    setRoundedBackground(
+                        view = qrSection,
+                        bgColor = 0xFFFAFAFA.toInt(),
+                        strokeColor = 0xFFE0E0E0.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                qrDescription?.setTextColor(0xFF999999.toInt())
+                btnQrPaid?.backgroundTintList = android.content.res.ColorStateList.valueOf(headerColor)
+                btnQrPaid?.setTextColor(Color.WHITE)
+                
+                if (checkingSection != null) {
+                    setRoundedBackground(
+                        view = checkingSection,
+                        bgColor = 0xFFFAFAFA.toInt(),
+                        strokeColor = 0xFFE0E0E0.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                statusMessage?.setTextColor(0xFF1A0030.toInt())
+                statusTimer?.setTextColor(0xFFAAAAAA.toInt())
+                
+                if (btnCancel != null) {
+                    setRoundedBackground(
+                        view = btnCancel,
+                        bgColor = 0xFFFFFCFC.toInt(),
+                        strokeColor = 0xFFEF4444.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 14f
+                    )
+                }
+                btnCancel?.setTextColor(0xFFEF4444.toInt())
+            }
+            2 -> {
+                root?.setBackgroundColor(0xFF0E0E18.toInt())
+                headerBar?.setBackgroundColor(0xFF08080F.toInt())
+                headerTitle?.setTextColor(Color.WHITE)
+                headerSubtitle?.setTextColor(0xFF8E8EA8.toInt())
+                dragHandle?.setBackgroundColor(0xFF3E3E50.toInt())
+
+                if (amountSection != null) {
+                    setGradientBackground(
+                        view = amountSection,
+                        startColor = 0x1FFFFFFF.toInt(),
+                        endColor = 0x0DFFFFFF.toInt(),
+                        orientation = android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                        strokeColor = 0x33FFFFFF.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 20f
+                    )
+                }
+                amountLabelTitle?.setTextColor(headerColor)
+                amountLabel?.setTextColor(Color.WHITE)
+                payUpiTitle?.setTextColor(0xFF8E8EA8.toInt())
+
+                if (trustRow != null) {
+                    setRoundedBackground(
+                        view = trustRow,
+                        bgColor = 0x1A4ADE80.toInt(),
+                        strokeColor = 0x334ADE80.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 10f
+                    )
+                    for (i in 0 until trustRow.childCount) {
+                        val child = trustRow.getChildAt(i)
+                        if (child is TextView) {
+                            if (child.text.toString().contains("·")) {
+                                child.setTextColor(0xFF1B5E20.toInt())
+                            } else {
+                                child.setTextColor(0xFF4ADE80.toInt())
+                            }
+                        }
+                    }
+                }
+
+                if (qrSection != null) {
+                    setRoundedBackground(
+                        view = qrSection,
+                        bgColor = 0xFF151522.toInt(),
+                        strokeColor = 0x33FFFFFF.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                qrDescription?.setTextColor(0xFF8E8EA8.toInt())
+                btnQrPaid?.backgroundTintList = android.content.res.ColorStateList.valueOf(headerColor)
+                btnQrPaid?.setTextColor(Color.WHITE)
+
+                if (checkingSection != null) {
+                    setRoundedBackground(
+                        view = checkingSection,
+                        bgColor = 0xFF151522.toInt(),
+                        strokeColor = 0x33FFFFFF.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                statusMessage?.setTextColor(Color.WHITE)
+                statusTimer?.setTextColor(0xFF8E8EA8.toInt())
+
+                if (btnCancel != null) {
+                    setRoundedBackground(
+                        view = btnCancel,
+                        bgColor = 0x2AEF4444.toInt(),
+                        strokeColor = 0xFFEF4444.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 14f
+                    )
+                }
+                btnCancel?.setTextColor(0xFFEF4444.toInt())
+
+                val upiButtons = listOf(R.id.btn_gpay, R.id.btn_phonepe, R.id.btn_paytm,
+                                        R.id.btn_bhim, R.id.btn_amazonpay, R.id.btn_cred)
+                upiButtons.forEach { id ->
+                    val btn = v.findViewById<com.google.android.material.button.MaterialButton>(id) ?: return@forEach
+                    btn.setTextColor(Color.WHITE)
+                    setRoundedBackground(
+                        view = btn,
+                        bgColor = 0x1AFFFFFF.toInt(),
+                        strokeColor = 0x33FFFFFF.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+            }
+            3 -> {
+                root?.setBackgroundColor(0xFFFAF9F6.toInt())
+                headerBar?.setBackgroundColor(Color.WHITE)
+                headerTitle?.setTextColor(Color.BLACK)
+                headerSubtitle?.setTextColor(0xFF555555.toInt())
+                dragHandle?.setBackgroundColor(Color.BLACK)
+
+                if (amountSection != null) {
+                    setRoundedBackground(
+                        view = amountSection,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                }
+                amountLabelTitle?.setTextColor(Color.BLACK)
+                amountLabel?.setTextColor(Color.BLACK)
+                payUpiTitle?.setTextColor(Color.BLACK)
+
+                if (trustRow != null) {
+                    setRoundedBackground(
+                        view = trustRow,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                    for (i in 0 until trustRow.childCount) {
+                        val child = trustRow.getChildAt(i)
+                        if (child is TextView) {
+                            child.setTextColor(Color.BLACK)
+                        }
+                    }
+                }
+
+                if (qrSection != null) {
+                    setRoundedBackground(
+                        view = qrSection,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                }
+                qrDescription?.setTextColor(0xFF555555.toInt())
+                btnQrPaid?.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF00FF66.toInt())
+                btnQrPaid?.setTextColor(Color.BLACK)
+                if (btnQrPaid != null) {
+                    setRoundedBackground(
+                        view = btnQrPaid,
+                        bgColor = 0xFF00FF66.toInt(),
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                }
+
+                if (checkingSection != null) {
+                    setRoundedBackground(
+                        view = checkingSection,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                }
+                statusMessage?.setTextColor(Color.BLACK)
+                statusTimer?.setTextColor(0xFF555555.toInt())
+
+                if (btnCheckStatus != null) {
+                    setRoundedBackground(
+                        view = btnCheckStatus,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                    btnCheckStatus.setTextColor(Color.BLACK)
+                }
+
+                if (btnCancel != null) {
+                    setRoundedBackground(
+                        view = btnCancel,
+                        bgColor = 0xFFEF4444.toInt(),
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                }
+                btnCancel?.setTextColor(Color.WHITE)
+
+                val upiButtons = listOf(R.id.btn_gpay, R.id.btn_phonepe, R.id.btn_paytm,
+                                        R.id.btn_bhim, R.id.btn_amazonpay, R.id.btn_cred)
+                upiButtons.forEach { id ->
+                    val btn = v.findViewById<com.google.android.material.button.MaterialButton>(id) ?: return@forEach
+                    btn.setTextColor(Color.BLACK)
+                    setRoundedBackground(
+                        view = btn,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                }
+            }
+            4 -> {
+                root?.setBackgroundColor(0xFF121212.toInt())
+                if (headerBar != null) {
+                    setGradientBackground(
+                        view = headerBar,
+                        startColor = 0xFF1A1612.toInt(),
+                        endColor = 0xFF3D3020.toInt(),
+                        orientation = android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT
+                    )
+                }
+                headerTitle?.setTextColor(0xFFD4AF37.toInt())
+                headerSubtitle?.setTextColor(0xFFCDB38C.toInt())
+                dragHandle?.setBackgroundColor(0xFFD4AF37.toInt())
+
+                if (amountSection != null) {
+                    setRoundedBackground(
+                        view = amountSection,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFD4AF37.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 20f
+                    )
+                }
+                amountLabelTitle?.setTextColor(0xFFD4AF37.toInt())
+                amountLabel?.setTextColor(0xFFF5EAD6.toInt())
+                payUpiTitle?.setTextColor(0xFFA3907F.toInt())
+
+                if (trustRow != null) {
+                    setRoundedBackground(
+                        view = trustRow,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFAA7C11.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 10f
+                    )
+                    for (i in 0 until trustRow.childCount) {
+                        val child = trustRow.getChildAt(i)
+                        if (child is TextView) {
+                            if (child.text.toString().contains("·")) {
+                                child.setTextColor(0xFFAA7C11.toInt())
+                            } else {
+                                child.setTextColor(0xFFE6C280.toInt())
+                            }
+                        }
+                    }
+                }
+
+                if (qrSection != null) {
+                    setRoundedBackground(
+                        view = qrSection,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFD4AF37.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                qrDescription?.setTextColor(0xFF8C7D70.toInt())
+                btnQrPaid?.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFD4AF37.toInt())
+                btnQrPaid?.setTextColor(0xFF121212.toInt())
+                if (btnQrPaid != null) {
+                    setRoundedBackground(
+                        view = btnQrPaid,
+                        bgColor = 0xFFD4AF37.toInt(),
+                        strokeColor = Color.TRANSPARENT,
+                        strokeWidthDp = 0f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+
+                if (checkingSection != null) {
+                    setRoundedBackground(
+                        view = checkingSection,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFD4AF37.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                statusMessage?.setTextColor(0xFFF5EAD6.toInt())
+                statusTimer?.setTextColor(0xFF8C7D70.toInt())
+
+                if (btnCheckStatus != null) {
+                    setRoundedBackground(
+                        view = btnCheckStatus,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFD4AF37.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 16f
+                    )
+                    btnCheckStatus.setTextColor(0xFFD4AF37.toInt())
+                }
+
+                if (btnCancel != null) {
+                    setRoundedBackground(
+                        view = btnCancel,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFEF4444.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                btnCancel?.setTextColor(0xFFEF4444.toInt())
+
+                val upiButtons = listOf(R.id.btn_gpay, R.id.btn_phonepe, R.id.btn_paytm,
+                                        R.id.btn_bhim, R.id.btn_amazonpay, R.id.btn_cred)
+                upiButtons.forEach { id ->
+                    val btn = v.findViewById<com.google.android.material.button.MaterialButton>(id) ?: return@forEach
+                    btn.setTextColor(0xFFE6C280.toInt())
+                    setRoundedBackground(
+                        view = btn,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFAA7C11.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+            }
+        }
+    }
+
+    private fun setRoundedBackground(
+        view: View,
+        bgColor: Int,
+        strokeColor: Int = Color.TRANSPARENT,
+        strokeWidthDp: Float = 0f,
+        cornerRadiusDp: Float = 0f
+    ) {
+        val density = resources.displayMetrics.density
+        val strokeWidthPx = (strokeWidthDp * density).toInt()
+        val cornerRadiusPx = cornerRadiusDp * density
+
+        val drawable = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            setColor(bgColor)
+            setCornerRadius(cornerRadiusPx)
+            if (strokeWidthPx > 0) {
+                setStroke(strokeWidthPx, strokeColor)
+            }
+        }
+        view.background = drawable
+    }
+
+    private fun setGradientBackground(
+        view: View,
+        startColor: Int,
+        endColor: Int,
+        orientation: android.graphics.drawable.GradientDrawable.Orientation = android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+        strokeColor: Int = Color.TRANSPARENT,
+        strokeWidthDp: Float = 0f,
+        cornerRadiusDp: Float = 0f
+    ) {
+        val density = resources.displayMetrics.density
+        val strokeWidthPx = (strokeWidthDp * density).toInt()
+        val cornerRadiusPx = cornerRadiusDp * density
+
+        val drawable = android.graphics.drawable.GradientDrawable(
+            orientation,
+            intArrayOf(startColor, endColor)
+        ).apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            setCornerRadius(cornerRadiusPx)
+            if (strokeWidthPx > 0) {
+                setStroke(strokeWidthPx, strokeColor)
+            }
+        }
+        view.background = drawable
     }
 }
