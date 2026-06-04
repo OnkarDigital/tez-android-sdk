@@ -632,6 +632,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         val statusTimer = v.findViewById<TextView>(R.id.tez_status_timer)
         val btnCheckStatus = v.findViewById<Button>(R.id.btn_check_status)
         val btnCancel = v.findViewById<Button>(R.id.btn_cancel)
+        val lockBadge = v.findViewById<View>(R.id.tez_header_lock_badge)
 
         when (themeId) {
             1 -> {
@@ -809,6 +810,16 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 headerTitle?.setTextColor(Color.BLACK)
                 headerSubtitle?.setTextColor(0xFF555555.toInt())
                 dragHandle?.setBackgroundColor(Color.BLACK)
+                
+                if (lockBadge != null) {
+                    setRoundedBackground(
+                        view = lockBadge,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2f,
+                        cornerRadiusDp = 4f
+                    )
+                }
 
                 if (amountSection != null) {
                     setRoundedBackground(

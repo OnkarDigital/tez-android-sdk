@@ -34,14 +34,13 @@
 
         <!-- Square lock badge -->
         <LinearLayout
+            android:id="@+id/tez_header_lock_badge"
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:gravity="center"
             android:background="#FFFFFF"
             android:orientation="vertical"
-            android:layout_marginEnd="12dp"
-            android:borderWidth="2dp"
-            android:borderColor="#000000">
+            android:layout_marginEnd="12dp">
 
             <TextView
                 android:layout_width="wrap_content"
