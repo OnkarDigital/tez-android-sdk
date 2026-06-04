@@ -328,6 +328,20 @@
                     </LinearLayout>
                 </HorizontalScrollView>
 
+                <!-- Fallback warning if no UPI apps installed -->
+                <TextView
+                    android:id="@+id/tez_no_upi_warning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="4dp"
+                    android:padding="12dp"
+                    android:textColor="#EF4444"
+                    android:textSize="12sp"
+                    android:text="No supported UPI apps (GPay, PhonePe, Paytm, etc.) found on this device. Please scan the QR code below to complete your payment."
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:lineSpacingExtra="2dp" />
+
                 <!-- TRUST ROW -->
                 <LinearLayout
                     android:id="@+id/tez_trust_row"

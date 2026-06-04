@@ -55,32 +55,47 @@ class StatusPollingService(
             var attempts = 0
 
             while (isActive) {
-                attempts++
-                Log.d(TAG, "Poll attempt $attempts/$MAX_ATTEMPTS for order $orderId")
+                try {
+                    val json = callCheckOrder()
+                    val result = json.optJSONObject("result")
+                    val status = result?.optString("txnStatus", "") ?: ""
 
-                val status = fetchStatus()
-
-                when (status) {
-                    "SUCCESS" -> {
-                        val utr = fetchUtr() ?: ""
-                        withContext(Dispatchers.Main) { callback.onPaymentSuccess(orderId, utr) }
-                        return@launch
-                    }
-                    "FAILURE" -> {
-                        withContext(Dispatchers.Main) {
-                            callback.onPaymentFailed(orderId, "Transaction failed")
-                        }
-                        return@launch
-                    }
-                    else -> {
-                        // PENDING or unknown — check timeout
-                        if (attempts >= MAX_ATTEMPTS) {
-                            Log.d(TAG, "Timeout after ${TIMEOUT_SECONDS}s — still pending")
-                            withContext(Dispatchers.Main) { callback.onPaymentPending(orderId) }
+                    when (status) {
+                        "SUCCESS" -> {
+                            val utr = result?.optString("utr", "") ?: ""
+                            withContext(Dispatchers.Main) { callback.onPaymentSuccess(orderId, utr) }
                             return@launch
                         }
-                        delay(POLL_INTERVAL_MS)
+                        "FAILURE" -> {
+                            withContext(Dispatchers.Main) {
+                                callback.onPaymentFailed(orderId, "Transaction failed")
+                            }
+                            return@launch
+                        }
+                        else -> {
+                            // PENDING or unknown — check timeout
+                            attempts++
+                            Log.d(TAG, "Poll attempt $attempts/$MAX_ATTEMPTS for order $orderId")
+                            if (attempts >= MAX_ATTEMPTS) {
+                                Log.d(TAG, "Timeout after ${TIMEOUT_SECONDS}s — still pending")
+                                withContext(Dispatchers.Main) { callback.onPaymentPending(orderId) }
+                                return@launch
+                            }
+                            delay(POLL_INTERVAL_MS)
+                        }
                     }
+                } catch (ioe: java.io.IOException) {
+                    Log.e(TAG, "Network disconnect during polling: ${ioe.message}. Retrying without incrementing attempts.")
+                    delay(POLL_INTERVAL_MS)
+                } catch (e: Exception) {
+                    attempts++
+                    Log.e(TAG, "Server/parsing error during polling: ${e.message}. Attempt $attempts/$MAX_ATTEMPTS")
+                    if (attempts >= MAX_ATTEMPTS) {
+                        Log.d(TAG, "Timeout after ${TIMEOUT_SECONDS}s — still pending")
+                        withContext(Dispatchers.Main) { callback.onPaymentPending(orderId) }
+                        return@launch
+                    }
+                    delay(POLL_INTERVAL_MS)
                 }
             }
         }
@@ -92,25 +107,6 @@ class StatusPollingService(
     }
 
     // ── Private helpers ────────────────────────────────────────────────
-
-    /** Returns the raw txnStatus string ("SUCCESS" | "FAILURE" | "PENDING"), or "" on error. */
-    private fun fetchStatus(): String {
-        return try {
-            val json = callCheckOrder()
-            json.optJSONObject("result")?.optString("txnStatus", "") ?: ""
-        } catch (e: Exception) {
-            Log.e(TAG, "Poll error: ${e.message}")
-            "" // Treat network errors as PENDING — keep retrying
-        }
-    }
-
-    /** Returns UTR from the same endpoint — called only on SUCCESS. */
-    private fun fetchUtr(): String? {
-        return try {
-            val json = callCheckOrder()
-            json.optJSONObject("result")?.optString("utr", "")
-        } catch (e: Exception) { null }
-    }
 
     private fun callCheckOrder(): JSONObject {
         val body = FormBody.Builder()

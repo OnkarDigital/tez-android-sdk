@@ -71,6 +71,9 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         internal var pendingPaymentData: PaymentData?        = null
         internal var pendingSettings:    CheckoutSettings?   = null
         internal var pendingCallback:    TezPaymentCallback? = null
+
+        internal var cachedLogo: Bitmap? = null
+        internal var cachedShield: Bitmap? = null
     }
 
     private lateinit var paymentData: PaymentData
@@ -257,6 +260,16 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
+        // Toggle no-UPI warning if all UPI buttons are GONE
+        val hasAnyInstalledUpi = listOf(
+            R.id.btn_gpay, R.id.btn_phonepe, R.id.btn_paytm,
+            R.id.btn_bhim, R.id.btn_amazonpay, R.id.btn_cred
+        ).any { id ->
+            v.findViewById<View>(id)?.visibility == View.VISIBLE
+        }
+        v.findViewById<View>(R.id.tez_no_upi_warning)?.visibility =
+            if (hasAnyInstalledUpi) View.GONE else View.VISIBLE
+
         // ── QR section ────────────────────────────────────────────────
         val qrSection    = v.findViewById<View>(R.id.tez_qr_section)
         val orDivider    = v.findViewById<View>(R.id.tez_or_divider)
@@ -357,13 +370,23 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     // ── Image loading ──────────────────────────────────────────────────
 
     private fun loadImageInto(url: String, imageView: ImageView) {
+        val cached = if (url == LOGO_URL) cachedLogo else if (url == SHIELD_URL) cachedShield else null
+        if (cached != null) {
+            imageView.setImageBitmap(cached)
+            return
+        }
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val bytes = okhttp3.OkHttpClient()
                     .newCall(okhttp3.Request.Builder().url(url).build())
                     .execute().body?.bytes() ?: return@launch
                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                withContext(Dispatchers.Main) { imageView.setImageBitmap(bitmap) }
+                if (bitmap != null) {
+                    if (url == LOGO_URL) cachedLogo = bitmap
+                    else if (url == SHIELD_URL) cachedShield = bitmap
+                    withContext(Dispatchers.Main) { imageView.setImageBitmap(bitmap) }
+                }
             } catch (e: Exception) { /* logo is cosmetic — never crash */ }
         }
     }
@@ -633,6 +656,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         val btnCheckStatus = v.findViewById<Button>(R.id.btn_check_status)
         val btnCancel = v.findViewById<Button>(R.id.btn_cancel)
         val lockBadge = v.findViewById<View>(R.id.tez_header_lock_badge)
+        val noUpiWarning = v.findViewById<TextView>(R.id.tez_no_upi_warning)
 
         when (themeId) {
             1 -> {
@@ -711,6 +735,17 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     )
                 }
                 btnCancel?.setTextColor(0xFFEF4444.toInt())
+
+                if (noUpiWarning != null) {
+                    setRoundedBackground(
+                        view = noUpiWarning,
+                        bgColor = 0xFFFFEBEE.toInt(),
+                        strokeColor = 0xFFFFCDD2.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 12f
+                    )
+                    noUpiWarning.setTextColor(0xFFC62828.toInt())
+                }
             }
             2 -> {
                 root?.setBackgroundColor(0xFF0E0E18.toInt())
@@ -802,6 +837,17 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                         strokeWidthDp = 1.5f,
                         cornerRadiusDp = 16f
                     )
+                }
+
+                if (noUpiWarning != null) {
+                    setRoundedBackground(
+                        view = noUpiWarning,
+                        bgColor = 0x1AEF4444.toInt(),
+                        strokeColor = 0xFFEF4444.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 16f
+                    )
+                    noUpiWarning.setTextColor(0xFFFCA5A5.toInt())
                 }
             }
             3 -> {
@@ -919,6 +965,17 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                         cornerRadiusDp = 8f
                     )
                 }
+
+                if (noUpiWarning != null) {
+                    setRoundedBackground(
+                        view = noUpiWarning,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                    noUpiWarning.setTextColor(0xFFC62828.toInt())
+                }
             }
             4 -> {
                 root?.setBackgroundColor(0xFF121212.toInt())
@@ -1035,6 +1092,17 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                         strokeWidthDp = 1.5f,
                         cornerRadiusDp = 16f
                     )
+                }
+
+                if (noUpiWarning != null) {
+                    setRoundedBackground(
+                        view = noUpiWarning,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFD4AF37.toInt(),
+                        strokeWidthDp = 1.5f,
+                        cornerRadiusDp = 16f
+                    )
+                    noUpiWarning.setTextColor(0xFFE6C280.toInt())
                 }
             }
         }

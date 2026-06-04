@@ -35,7 +35,13 @@ internal object SettingsClient {
             .build()
 
         val response = client.newCall(request).execute()
-        val json = JSONObject(response.body?.string() ?: "{}")
+        val responseBody = response.body?.string() ?: "{}"
+        val json = JSONObject(responseBody)
+        val status = json.optBoolean("status", false)
+        if (!status) {
+            val message = json.optString("message", "Failed to fetch checkout settings")
+            throw Exception(message)
+        }
         val s = json.getJSONObject("settings")
 
         return CheckoutSettings(
