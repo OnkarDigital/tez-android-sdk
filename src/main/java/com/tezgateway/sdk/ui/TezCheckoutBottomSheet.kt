@@ -302,10 +302,16 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                         android.content.res.ColorStateList.valueOf(headerColor)
                 }
 
-                // ── QR BUG FIX: tap "I've Paid" → directly start status polling ──
-                btnQrPaid.setOnClickListener {
-                    showCheckingState()
-                    startPolling()
+                // In manual mode, the user must submit UTR. Hide the "I've Paid" check status button.
+                if (settings.method.equals("Manual", ignoreCase = true)) {
+                    btnQrPaid.visibility = View.GONE
+                } else {
+                    btnQrPaid.visibility = View.VISIBLE
+                    // ── QR BUG FIX: tap "I've Paid" → directly start status polling ──
+                    btnQrPaid.setOnClickListener {
+                        showCheckingState()
+                        startPolling()
+                    }
                 }
             } catch (e: Exception) {
                 qrSection.visibility = View.GONE
@@ -645,8 +651,10 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         super.onResume()
         if (paymentLaunched && !resultDelivered) {
             paymentLaunched = false
-            showCheckingState()
-            startPolling()
+            if (!settings.method.equals("Manual", ignoreCase = true)) {
+                showCheckingState()
+                startPolling()
+            }
         }
     }
 
