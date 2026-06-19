@@ -104,6 +104,11 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     private lateinit var brandingLogo:    ImageView
     private lateinit var spinnerLogo:     ImageView
 
+    private lateinit var manualUtrSection: View
+    private lateinit var manualUtrInput:   EditText
+    private lateinit var btnManualUtrSubmit: Button
+    private lateinit var manualUtrMsg:     TextView
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
@@ -156,6 +161,11 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         btnCancel       = v.findViewById(R.id.btn_cancel)
         brandingLogo    = v.findViewById(R.id.tez_branding_logo)
         spinnerLogo     = v.findViewById(R.id.tez_spinner_logo)
+
+        manualUtrSection   = v.findViewById(R.id.tez_manual_utr_section)
+        manualUtrInput     = v.findViewById(R.id.tez_manual_utr_input)
+        btnManualUtrSubmit = v.findViewById(R.id.btn_manual_utr_submit)
+        manualUtrMsg       = v.findViewById(R.id.tez_manual_utr_msg)
     }
 
     private fun setupUI(v: View) {
@@ -304,6 +314,16 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         } else {
             qrSection.visibility = View.GONE
             orDivider.visibility = View.GONE
+        }
+
+        // ── Manual UTR section ─────────────────────────────────────────
+        if (settings.method.equals("Manual", ignoreCase = true)) {
+            manualUtrSection.visibility = View.VISIBLE
+            btnManualUtrSubmit.setOnClickListener {
+                submitManualUtr()
+            }
+        } else {
+            manualUtrSection.visibility = View.GONE
         }
 
         // ── Cancel button ─────────────────────────────────────────────
@@ -712,6 +732,29 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 qrDescription?.setTextColor(0xFF999999.toInt())
                 btnQrPaid?.backgroundTintList = android.content.res.ColorStateList.valueOf(headerColor)
                 btnQrPaid?.setTextColor(Color.WHITE)
+
+                if (manualUtrSection != null) {
+                    setRoundedBackground(
+                        view = manualUtrSection,
+                        bgColor = 0xFFFAFAFA.toInt(),
+                        strokeColor = 0xFFE0E0E0.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                if (manualUtrInput != null) {
+                    setRoundedBackground(
+                        view = manualUtrInput,
+                        bgColor = 0xFFF8FAFC.toInt(),
+                        strokeColor = 0xFFE2E8F0.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 10f
+                    )
+                    manualUtrInput.setTextColor(0xFF1A0030.toInt())
+                    manualUtrInput.setHintTextColor(0xFF999999.toInt())
+                }
+                btnManualUtrSubmit?.backgroundTintList = android.content.res.ColorStateList.valueOf(headerColor)
+                btnManualUtrSubmit?.setTextColor(Color.WHITE)
                 
                 if (checkingSection != null) {
                     setRoundedBackground(
@@ -801,6 +844,29 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 qrDescription?.setTextColor(0xFF8E8EA8.toInt())
                 btnQrPaid?.backgroundTintList = android.content.res.ColorStateList.valueOf(headerColor)
                 btnQrPaid?.setTextColor(Color.WHITE)
+
+                if (manualUtrSection != null) {
+                    setRoundedBackground(
+                        view = manualUtrSection,
+                        bgColor = 0xFF151522.toInt(),
+                        strokeColor = 0x33FFFFFF.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                if (manualUtrInput != null) {
+                    setRoundedBackground(
+                        view = manualUtrInput,
+                        bgColor = 0xFF0E0E18.toInt(),
+                        strokeColor = 0x33FFFFFF.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 10f
+                    )
+                    manualUtrInput.setTextColor(Color.WHITE)
+                    manualUtrInput.setHintTextColor(0xFF8E8EA8.toInt())
+                }
+                btnManualUtrSubmit?.backgroundTintList = android.content.res.ColorStateList.valueOf(headerColor)
+                btnManualUtrSubmit?.setTextColor(Color.WHITE)
 
                 if (checkingSection != null) {
                     setRoundedBackground(
@@ -916,6 +982,37 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                         strokeWidthDp = 2.5f,
                         cornerRadiusDp = 8f
                     )
+                }
+
+                if (manualUtrSection != null) {
+                    setRoundedBackground(
+                        view = manualUtrSection,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                }
+                if (manualUtrInput != null) {
+                    setRoundedBackground(
+                        view = manualUtrInput,
+                        bgColor = Color.WHITE,
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                    manualUtrInput.setTextColor(Color.BLACK)
+                    manualUtrInput.setHintTextColor(0xFF555555.toInt())
+                }
+                if (btnManualUtrSubmit != null) {
+                    setRoundedBackground(
+                        view = btnManualUtrSubmit,
+                        bgColor = 0xFF00FF66.toInt(),
+                        strokeColor = Color.BLACK,
+                        strokeWidthDp = 2.5f,
+                        cornerRadiusDp = 8f
+                    )
+                    btnManualUtrSubmit.setTextColor(Color.BLACK)
                 }
 
                 if (checkingSection != null) {
@@ -1046,6 +1143,37 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     )
                 }
 
+                if (manualUtrSection != null) {
+                    setRoundedBackground(
+                        view = manualUtrSection,
+                        bgColor = 0xFF1D1916.toInt(),
+                        strokeColor = 0xFFD4AF37.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 16f
+                    )
+                }
+                if (manualUtrInput != null) {
+                    setRoundedBackground(
+                        view = manualUtrInput,
+                        bgColor = 0xFF121212.toInt(),
+                        strokeColor = 0xFFD4AF37.toInt(),
+                        strokeWidthDp = 1f,
+                        cornerRadiusDp = 10f
+                    )
+                    manualUtrInput.setTextColor(0xFFF5EAD6.toInt())
+                    manualUtrInput.setHintTextColor(0xFF8C7D70.toInt())
+                }
+                if (btnManualUtrSubmit != null) {
+                    setRoundedBackground(
+                        view = btnManualUtrSubmit,
+                        bgColor = 0xFFD4AF37.toInt(),
+                        strokeColor = Color.TRANSPARENT,
+                        strokeWidthDp = 0f,
+                        cornerRadiusDp = 16f
+                    )
+                    btnManualUtrSubmit.setTextColor(0xFF121212.toInt())
+                }
+
                 if (checkingSection != null) {
                     setRoundedBackground(
                         view = checkingSection,
@@ -1154,5 +1282,65 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             }
         }
         view.background = drawable
+    }
+
+    private fun submitManualUtr() {
+        val utr = manualUtrInput.text.toString().trim()
+        
+        // Validation: length 12 to 30, alphanumeric only
+        val utrRegex = Regex("^[A-Za-z0-9]{12,30}$")
+        if (!utrRegex.matches(utr)) {
+            showUtrMessage("Please enter a valid 12 to 30 character alphanumeric UTR", isError = true)
+            return
+        }
+
+        // Hide message/clear state
+        showUtrMessage("", isError = false)
+
+        // Disable input and button to prevent double submission
+        manualUtrInput.isEnabled = false
+        btnManualUtrSubmit.isEnabled = false
+        btnManualUtrSubmit.text = "..."
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val (success, message) = SettingsClient.submitUtr(
+                baseUrl = baseUrl,
+                userToken = userToken,
+                orderId = orderId,
+                utr = utr
+            )
+            withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                
+                if (success) {
+                    // Success, transition to checking state and start polling
+                    showCheckingState()
+                    startPolling()
+                } else {
+                    // Fail, re-enable views and show error message
+                    manualUtrInput.isEnabled = true
+                    btnManualUtrSubmit.isEnabled = true
+                    btnManualUtrSubmit.text = "Submit"
+                    showUtrMessage(message.ifBlank { "Failed to submit UTR. Please try again." }, isError = true)
+                }
+            }
+        }
+    }
+
+    private fun showUtrMessage(msg: String, isError: Boolean) {
+        if (msg.isBlank()) {
+            manualUtrMsg.visibility = View.GONE
+            return
+        }
+        manualUtrMsg.text = msg
+        val themeId = if (settings.theme in 1..4) settings.theme else 1
+        val color = when (themeId) {
+            2 -> if (isError) 0xFFEF4444.toInt() else 0xFF4ADE80.toInt()
+            3 -> if (isError) Color.RED else 0xFF2E7D32.toInt()
+            4 -> if (isError) 0xFFEF4444.toInt() else 0xFFE6C280.toInt()
+            else -> if (isError) Color.RED else 0xFF2E7D32.toInt()
+        }
+        manualUtrMsg.setTextColor(color)
+        manualUtrMsg.visibility = View.VISIBLE
     }
 }

@@ -92,7 +92,8 @@ data class CheckoutSettings(
     val display_header_footer: Boolean = true,
     val display_loading_screen: Boolean = true,
     val news: String = "",
-    val phonepe_default_lang: String = "hi"
+    val phonepe_default_lang: String = "hi",
+    val method: String = ""
 )
 
 // ─────────────────────────────────────────────────────────────────

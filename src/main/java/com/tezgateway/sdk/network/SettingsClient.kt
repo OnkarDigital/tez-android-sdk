@@ -64,7 +64,8 @@ internal object SettingsClient {
             display_header_footer   = s.optBoolean("display_header_footer", true),
             display_loading_screen  = s.optBoolean("display_loading_screen", true),
             news                = s.optString("news", ""),
-            phonepe_default_lang = s.optString("phonepe_default_lang", "hi")
+            phonepe_default_lang = s.optString("phonepe_default_lang", "hi"),
+            method              = s.optString("method", "")
         )
     }
 
@@ -86,5 +87,32 @@ internal object SettingsClient {
             val responseBody = client.newCall(request).execute().body?.string() ?: return false
             JSONObject(responseBody).optBoolean("status", false)
         } catch (_: Exception) { false }
+    }
+
+    /**
+     * Submits a manual UTR to the server.
+     * Blocking — call from a background thread.
+     * @return Pair(success: Boolean, message: String)
+     */
+    fun submitUtr(baseUrl: String, userToken: String, orderId: String, utr: String): Pair<Boolean, String> {
+        return try {
+            val body = FormBody.Builder()
+                .add("user_token", userToken)
+                .add("order_id", orderId)
+                .add("utr", utr)
+                .build()
+            val request = Request.Builder()
+                .url("${baseUrl.trimEnd('/')}/api/submit-utr")
+                .post(body)
+                .build()
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: "{}"
+            val json = JSONObject(responseBody)
+            val success = json.optBoolean("status", false)
+            val message = json.optString("message", "")
+            Pair(success, message)
+        } catch (e: Exception) {
+            Pair(false, e.message ?: "Network error. Please try again.")
+        }
     }
 }
