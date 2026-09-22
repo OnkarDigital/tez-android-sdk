@@ -66,7 +66,9 @@ internal object SettingsClient {
             news                = s.optString("news", ""),
             phonepe_default_lang = s.optString("phonepe_default_lang", "hi"),
             method              = s.optString("method", ""),
-            latestSdkVersion    = s.optString("latest_sdk_version", "")
+            latestSdkVersion    = s.optString("latest_sdk_version", ""),
+            manualUtrRevealInSeconds = if (s.isNull("manual_utr_reveal_in_seconds")) null
+                                       else s.optInt("manual_utr_reveal_in_seconds")
         )
     }
 

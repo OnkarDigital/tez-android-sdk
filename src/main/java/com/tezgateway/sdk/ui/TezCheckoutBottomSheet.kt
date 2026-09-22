@@ -348,13 +348,25 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         }
 
         // ── Manual UTR section ─────────────────────────────────────────
-        if (settings.method.equals("Manual", ignoreCase = true)) {
-            manualUtrSection.visibility = View.VISIBLE
-            btnManualUtrSubmit.setOnClickListener {
-                submitManualUtr()
+        // Manual: always visible immediately (admin/human reviews whatever UTR
+        // comes in, so there's no auto-match window to wait out).
+        // Bharatpe/Mobikwik/Paynearby/Flipkart/Bankconnect: same fallback box,
+        // but hidden until manualUtrRevealInSeconds — mirrors the web pay-page's
+        // "only offer manual entry once the live auto-match window has closed".
+        val revealDelay = settings.manualUtrRevealInSeconds
+        when {
+            settings.method.equals("Manual", ignoreCase = true) -> {
+                manualUtrSection.visibility = View.VISIBLE
+                btnManualUtrSubmit.setOnClickListener { submitManualUtr() }
             }
-        } else {
-            manualUtrSection.visibility = View.GONE
+            revealDelay != null -> {
+                manualUtrSection.visibility = View.GONE
+                btnManualUtrSubmit.setOnClickListener { submitManualUtr() }
+                scheduleManualUtrReveal(revealDelay)
+            }
+            else -> {
+                manualUtrSection.visibility = View.GONE
+            }
         }
 
         // ── Cancel button ─────────────────────────────────────────────
@@ -407,6 +419,21 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         loadImageInto(SHIELD_URL, spinnerLogo)
 
         applySdkVersionTag()
+    }
+
+    /**
+     * Reveals the manual-UTR fallback box [afterSeconds] after settings were
+     * fetched — mirrors the web pay-page's JS reveal timer. No-op if the sheet
+     * is gone or the order already resolved by the time this fires (checking the
+     * UTR box would be pointless once a result is already showing).
+     */
+    private fun scheduleManualUtrReveal(afterSeconds: Int) {
+        lifecycleScope.launch {
+            delay(afterSeconds.coerceAtLeast(0).toLong() * 1000)
+            if (isAdded && !resultDelivered) {
+                manualUtrSection.visibility = View.VISIBLE
+            }
+        }
     }
 
     /**

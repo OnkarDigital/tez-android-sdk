@@ -100,7 +100,15 @@ data class CheckoutSettings(
      * shows no "update available" badge. New field, appended last with a
      * default, so it can't break any existing positional constructor call.
      */
-    val latestSdkVersion: String = ""
+    val latestSdkVersion: String = "",
+    /**
+     * Seconds from settings-fetch-time until the manual-UTR fallback box should
+     * reveal itself — mirrors the web pay-page's manualUtrEligibleAfterSeconds.
+     * Null when this order's method doesn't use amount+time-window matching at
+     * all (Manual, or any reference/order-id-based provider), in which case no
+     * timed box is shown by the SDK (Manual keeps its own always-visible box).
+     */
+    val manualUtrRevealInSeconds: Int? = null
 )
 
 // ─────────────────────────────────────────────────────────────────

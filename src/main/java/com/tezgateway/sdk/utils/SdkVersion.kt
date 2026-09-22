@@ -14,7 +14,7 @@ package com.tezgateway.sdk.utils
 object SdkVersion {
 
     /** Mirrors build.gradle's defaultConfig.versionName. */
-    const val CURRENT: String = "1.0.26"
+    const val CURRENT: String = "1.0.27"
 
     /**
      * True when [latest] (as reported by get_checkout_settings.php) is a newer
