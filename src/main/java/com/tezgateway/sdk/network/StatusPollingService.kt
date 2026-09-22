@@ -106,6 +106,30 @@ class StatusPollingService(
         pollingJob = null
     }
 
+    /**
+     * One-shot status check — not part of the polling loop. Used by the checkout
+     * UI's visible countdown to do a definitive final check right when the timer
+     * hits zero, instead of only relying on the last scheduled poll attempt.
+     * Must be called from a background thread (e.g. Dispatchers.IO).
+     *
+     * New method, purely additive — does not change any existing behaviour.
+     */
+    fun checkOnce(): OneShotResult {
+        return try {
+            val json = callCheckOrder()
+            val result = json.optJSONObject("result")
+            val status = result?.optString("txnStatus", "") ?: ""
+            val utr = result?.optString("utr", "") ?: ""
+            OneShotResult(status, utr)
+        } catch (e: Exception) {
+            Log.e(TAG, "checkOnce() failed: ${e.message}")
+            OneShotResult("", "")
+        }
+    }
+
+    /** Result of [checkOnce]. [status] is "SUCCESS" | "FAILURE" | "" (pending/unknown/error). */
+    data class OneShotResult(val status: String, val utr: String)
+
     // ── Private helpers ────────────────────────────────────────────────
 
     private fun callCheckOrder(): JSONObject {

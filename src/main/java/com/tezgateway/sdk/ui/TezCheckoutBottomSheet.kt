@@ -1,5 +1,6 @@
 package com.tezgateway.sdk.ui
 
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -13,6 +14,8 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.tezgateway.sdk.R
 import com.tezgateway.sdk.interfaces.TezPaymentCallback
@@ -20,6 +23,7 @@ import com.tezgateway.sdk.models.CheckoutSettings
 import com.tezgateway.sdk.models.PaymentData
 import com.tezgateway.sdk.network.SettingsClient
 import com.tezgateway.sdk.network.StatusPollingService
+import com.tezgateway.sdk.utils.SdkVersion
 import com.tezgateway.sdk.utils.UpiIntentHelper
 import kotlinx.coroutines.*
 import java.io.File
@@ -103,6 +107,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     private lateinit var btnCancel:       Button
     private lateinit var brandingLogo:    ImageView
     private lateinit var spinnerLogo:     ImageView
+    private var versionTag:       TextView? = null   // nullable: absent in an old host app's cached/overridden layout
 
     private lateinit var manualUtrSection: View
     private lateinit var manualUtrInput:   EditText
@@ -121,6 +126,25 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             else -> R.layout.bottomsheet_tez_checkout
         }
         return inflater.inflate(layoutRes, container, false)
+    }
+
+    /**
+     * The payment window closes only via the Cancel/Close button — not by swiping
+     * it down, tapping outside, or the system back button. A payment sheet is easy
+     * to dismiss by accident with any of those, which then reads to the merchant
+     * app as an unresolved order even though the user never actually meant to
+     * leave (and, worse, without the explicit-cancel flow that tells the server
+     * to mark it FAILURE — see btnCancel's own click listener in setupUI()).
+     */
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        isCancelable = false
+        val dialog = super.onCreateDialog(savedInstanceState)
+        dialog.setCanceledOnTouchOutside(false)
+        (dialog as? BottomSheetDialog)?.setOnShowListener {
+            val sheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            sheet?.let { BottomSheetBehavior.from(it).isDraggable = false }
+        }
+        return dialog
     }
 
     override fun onStart() {
@@ -161,6 +185,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         btnCancel       = v.findViewById(R.id.btn_cancel)
         brandingLogo    = v.findViewById(R.id.tez_branding_logo)
         spinnerLogo     = v.findViewById(R.id.tez_spinner_logo)
+        versionTag      = v.findViewById<TextView?>(R.id.tez_version_tag)
 
         manualUtrSection   = v.findViewById(R.id.tez_manual_utr_section)
         manualUtrInput     = v.findViewById(R.id.tez_manual_utr_input)
@@ -380,6 +405,27 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         // ── Logos ─────────────────────────────────────────────────────
         loadImageInto(LOGO_URL,   brandingLogo)
         loadImageInto(SHIELD_URL, spinnerLogo)
+
+        applySdkVersionTag()
+    }
+
+    /**
+     * Small "v1.0.25" caption near the branding logo; turns into an "update
+     * available" hint when get_checkout_settings.php reports a newer version.
+     * Cosmetic only — never blocks or alters the payment flow either way.
+     */
+    private fun applySdkVersionTag() {
+        val tag = versionTag ?: return
+        val updateAvailable = SdkVersion.isUpdateAvailable(settings.latestSdkVersion)
+        if (updateAvailable) {
+            tag.text = "⬆ v${SdkVersion.CURRENT} update available"
+            tag.setTextColor(0xFFB45309.toInt()) // amber-700 — consistent across all themes, it's a system notice, not a theme colour
+            tag.alpha = 1f
+            setRoundedBackground(tag, bgColor = 0xFFFEF3C7.toInt(), cornerRadiusDp = 8f) // amber-100 pill
+        } else {
+            tag.text = "v${SdkVersion.CURRENT}"
+            tag.background = null
+        }
     }
 
     /** Show/hide a UPI button and set its click listener. */
@@ -512,16 +558,116 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         startElapsedTimer()
     }
 
+    /**
+     * Small visible countdown (v1: was an elapsed "Checking for Xs…" counter —
+     * now counts DOWN to 0, matching the web pay-page's QR countdown pattern).
+     * When it reaches zero, [performFinalStatusCheck] runs a definitive last
+     * check before the sheet gives up, instead of silently relying on whichever
+     * scheduled poll happened to land nearest the deadline.
+     */
     private fun startElapsedTimer() {
         timerJob?.cancel()
         timerJob = lifecycleScope.launch(Dispatchers.Main) {
-            var elapsed = 0
-            while (elapsed < StatusPollingService.TIMEOUT_SECONDS && isActive) {
-                statusTimer.text = "Checking for ${elapsed}s…"
+            var remaining = StatusPollingService.TIMEOUT_SECONDS
+            while (remaining > 0 && isActive) {
+                statusTimer.text = formatCountdown(remaining)
+                // Last 10s — nudge the chip red, same "getting urgent" cue as the
+                // web pay-page's QR countdown, so the user isn't caught off guard
+                // when the final check (and possibly a close) is about to happen.
+                if (remaining <= 10) {
+                    statusTimer.setTextColor(0xFFEF4444.toInt())
+                }
                 delay(1000)
-                elapsed++
+                remaining--
             }
-            if (isActive) statusTimer.text = "Checked for ${StatusPollingService.TIMEOUT_SECONDS}s"
+            if (isActive && !resultDelivered) {
+                statusTimer.text = formatCountdown(0)
+                performFinalStatusCheck()
+            }
+        }
+    }
+
+    private fun formatCountdown(seconds: Int): String {
+        val m = seconds / 60
+        val s = seconds % 60
+        return "⏱ %d:%02d".format(m, s)
+    }
+
+    /**
+     * One last direct status check right when the visible countdown hits zero —
+     * mirrors the pay-page web flow's "final check before declaring timeout"
+     * instead of only trusting whichever scheduled poll attempt happened last.
+     * No-op if the order already resolved by the time this fires.
+     */
+    private fun performFinalStatusCheck() {
+        if (resultDelivered) return
+        pollingService?.stopPolling()
+        statusMessage.text = "Doing one final check…"
+
+        val poller = pollingService ?: StatusPollingService(
+            baseUrl = baseUrl, userToken = userToken, orderId = orderId,
+            callback = object : TezPaymentCallback {
+                override fun onPaymentSuccess(orderId: String, utr: String) {}
+                override fun onPaymentFailed(orderId: String, reason: String) {}
+                override fun onPaymentPending(orderId: String) {}
+            }
+        )
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = poller.checkOnce()
+            withContext(Dispatchers.Main) {
+                if (!isAdded || resultDelivered) return@withContext
+                handleResolvedStatus(result.status, result.utr)
+            }
+        }
+    }
+
+    /**
+     * Shared SUCCESS/FAILURE/PENDING UI handling — used by both the normal
+     * polling callback ([startPolling]) and the final check ([performFinalStatusCheck]),
+     * so the two never show inconsistent results for the same outcome.
+     */
+    private fun handleResolvedStatus(status: String, utr: String) {
+        when (status) {
+            "SUCCESS" -> {
+                showResult(
+                    iconText    = "✓",
+                    title       = "Payment Successful",
+                    subtitle    = if (utr.isNotBlank()) "UTR: $utr" else "Order: $orderId",
+                    cardBgColor = 0xFFE8F5E9.toInt(),
+                    titleColor  = 0xFF2E7D32.toInt()
+                )
+                btnCancel.visibility = View.GONE
+                lifecycleScope.launch {
+                    delay(1800)
+                    dismiss()
+                    callback.onPaymentSuccess(orderId, utr)
+                }
+            }
+            "FAILURE" -> {
+                showResult(
+                    iconText    = "✗",
+                    title       = "Payment Failed",
+                    subtitle    = "Transaction failed",
+                    cardBgColor = 0xFFFFEBEE.toInt(),
+                    titleColor  = 0xFFC62828.toInt()
+                )
+                lifecycleScope.launch {
+                    delay(2000)
+                    dismiss()
+                    callback.onPaymentFailed(orderId, "Transaction failed")
+                }
+            }
+            else -> {
+                showResult(
+                    iconText    = "⏳",
+                    title       = "Payment Pending",
+                    subtitle    = "Your payment is being verified.\nPlease check your UPI app.",
+                    cardBgColor = 0xFFFFF8E1.toInt(),
+                    titleColor  = 0xFFE65100.toInt()
+                )
+                callback.onPaymentPending(orderId)
+            }
         }
     }
 
@@ -602,45 +748,9 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             userToken = userToken,
             orderId   = orderId,
             callback  = object : TezPaymentCallback {
-                override fun onPaymentSuccess(orderId: String, utr: String) {
-                    showResult(
-                        iconText    = "✓",
-                        title       = "Payment Successful",
-                        subtitle    = if (utr.isNotBlank()) "UTR: $utr" else "Order: $orderId",
-                        cardBgColor = 0xFFE8F5E9.toInt(),
-                        titleColor  = 0xFF2E7D32.toInt()
-                    )
-                    btnCancel.visibility = View.GONE
-                    lifecycleScope.launch {
-                        delay(1800)
-                        dismiss()
-                        callback.onPaymentSuccess(orderId, utr)
-                    }
-                }
-                override fun onPaymentFailed(orderId: String, reason: String) {
-                    showResult(
-                        iconText    = "✗",
-                        title       = "Payment Failed",
-                        subtitle    = reason,
-                        cardBgColor = 0xFFFFEBEE.toInt(),
-                        titleColor  = 0xFFC62828.toInt()
-                    )
-                    lifecycleScope.launch {
-                        delay(2000)
-                        dismiss()
-                        callback.onPaymentFailed(orderId, reason)
-                    }
-                }
-                override fun onPaymentPending(orderId: String) {
-                    showResult(
-                        iconText    = "⏳",
-                        title       = "Payment Pending",
-                        subtitle    = "Your payment is being verified.\nPlease check your UPI app.",
-                        cardBgColor = 0xFFFFF8E1.toInt(),
-                        titleColor  = 0xFFE65100.toInt()
-                    )
-                    callback.onPaymentPending(orderId)
-                }
+                override fun onPaymentSuccess(orderId: String, utr: String) = handleResolvedStatus("SUCCESS", utr)
+                override fun onPaymentFailed(orderId: String, reason: String) = handleResolvedStatus("FAILURE", "")
+                override fun onPaymentPending(orderId: String) = handleResolvedStatus("", "")
             }
         )
         pollingService?.startPolling(lifecycleScope)
@@ -774,7 +884,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     )
                 }
                 statusMessage?.setTextColor(0xFF1A0030.toInt())
-                statusTimer?.setTextColor(0xFFAAAAAA.toInt())
+                statusTimer?.setTextColor(0xFF7A7A8C.toInt())
+                statusTimer?.let { setRoundedBackground(it, bgColor = 0xFFF0F0F5.toInt(), cornerRadiusDp = 20f) }
                 
                 if (btnCancel != null) {
                     setRoundedBackground(
@@ -886,7 +997,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     )
                 }
                 statusMessage?.setTextColor(Color.WHITE)
-                statusTimer?.setTextColor(0xFF8E8EA8.toInt())
+                statusTimer?.setTextColor(0xFFB8B8CC.toInt())
+                statusTimer?.let { setRoundedBackground(it, bgColor = 0x1AFFFFFF.toInt(), cornerRadiusDp = 20f) }
 
                 if (btnCancel != null) {
                     setRoundedBackground(
@@ -1033,7 +1145,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     )
                 }
                 statusMessage?.setTextColor(Color.BLACK)
-                statusTimer?.setTextColor(0xFF555555.toInt())
+                statusTimer?.setTextColor(Color.BLACK)
+                statusTimer?.let { setRoundedBackground(it, bgColor = Color.WHITE, strokeColor = Color.BLACK, strokeWidthDp = 2f, cornerRadiusDp = 6f) }
 
                 if (btnCheckStatus != null) {
                     setRoundedBackground(
@@ -1192,7 +1305,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     )
                 }
                 statusMessage?.setTextColor(0xFFF5EAD6.toInt())
-                statusTimer?.setTextColor(0xFF8C7D70.toInt())
+                statusTimer?.setTextColor(0xFFE6C280.toInt())
+                statusTimer?.let { setRoundedBackground(it, bgColor = 0xFF1D1916.toInt(), strokeColor = 0xFFD4AF37.toInt(), strokeWidthDp = 1f, cornerRadiusDp = 20f) }
 
                 if (btnCheckStatus != null) {
                     setRoundedBackground(

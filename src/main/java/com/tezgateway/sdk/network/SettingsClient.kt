@@ -65,7 +65,8 @@ internal object SettingsClient {
             display_loading_screen  = s.optBoolean("display_loading_screen", true),
             news                = s.optString("news", ""),
             phonepe_default_lang = s.optString("phonepe_default_lang", "hi"),
-            method              = s.optString("method", "")
+            method              = s.optString("method", ""),
+            latestSdkVersion    = s.optString("latest_sdk_version", "")
         )
     }
 

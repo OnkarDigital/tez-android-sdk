@@ -93,7 +93,14 @@ data class CheckoutSettings(
     val display_loading_screen: Boolean = true,
     val news: String = "",
     val phonepe_default_lang: String = "hi",
-    val method: String = ""
+    val method: String = "",
+    /**
+     * Latest published SDK version, as reported by get_checkout_settings.php.
+     * Blank when the server doesn't send it (older backend) — SDK then simply
+     * shows no "update available" badge. New field, appended last with a
+     * default, so it can't break any existing positional constructor call.
+     */
+    val latestSdkVersion: String = ""
 )
 
 // ─────────────────────────────────────────────────────────────────
