@@ -13,7 +13,10 @@ import java.util.concurrent.TimeUnit
  * Polls check_order.php after user returns from UPI app.
  *
  * Behaviour:
- *  - Polls every [POLL_INTERVAL_MS] ms for up to [TIMEOUT_SECONDS] seconds.
+ *  - Polls every [POLL_INTERVAL_MS] ms for up to [timeoutSeconds] seconds
+ *    (defaults to [TIMEOUT_SECONDS] when the caller doesn't pass one — e.g. for
+ *    Manual and other reference-based providers that don't have a comparable
+ *    server-side auto-match window to sync against).
  *  - Stops immediately on SUCCESS or FAILURE — does not wait for the full timeout.
  *  - Only fires onPaymentPending() after the full timeout if still unresolved.
  *  - [startPolling] can be called again after [stopPolling] to restart (used by "Check Now").
@@ -22,20 +25,30 @@ class StatusPollingService(
     private val baseUrl:   String,
     private val userToken: String,
     private val orderId:   String,
-    private val callback:  TezPaymentCallback
+    private val callback:  TezPaymentCallback,
+    /**
+     * Per-instance poll budget in seconds — lets the checkout UI sync this to the
+     * server's own remaining auto-match window (CheckoutSettings.manualUtrRevealInSeconds)
+     * instead of always using the fixed default, so the app doesn't give up before/long
+     * after the backend itself would. New parameter with a default value, so every
+     * existing call site (and any code compiled against an older version of this
+     * class) keeps working unchanged.
+     */
+    private val timeoutSeconds: Int = TIMEOUT_SECONDS
 ) {
     companion object {
         private const val TAG = "TezStatusPoller"
 
-        /** Total wait window after user returns from UPI app. */
+        /** Default total wait window when the caller doesn't specify one. */
         const val TIMEOUT_SECONDS = 100
 
         /** Interval between consecutive checks. */
         private const val POLL_INTERVAL_MS = 5_000L
-
-        /** Max attempts = TIMEOUT_SECONDS / (POLL_INTERVAL_MS / 1000) = 20 */
-        private val MAX_ATTEMPTS = (TIMEOUT_SECONDS / (POLL_INTERVAL_MS / 1000)).toInt()
     }
+
+    /** Max attempts for *this* instance's budget = timeoutSeconds / (POLL_INTERVAL_MS / 1000), at least 1. */
+    private val maxAttempts: Int =
+        (timeoutSeconds / (POLL_INTERVAL_MS / 1000)).toInt().coerceAtLeast(1)
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -75,9 +88,9 @@ class StatusPollingService(
                         else -> {
                             // PENDING or unknown — check timeout
                             attempts++
-                            Log.d(TAG, "Poll attempt $attempts/$MAX_ATTEMPTS for order $orderId")
-                            if (attempts >= MAX_ATTEMPTS) {
-                                Log.d(TAG, "Timeout after ${TIMEOUT_SECONDS}s — still pending")
+                            Log.d(TAG, "Poll attempt $attempts/$maxAttempts for order $orderId")
+                            if (attempts >= maxAttempts) {
+                                Log.d(TAG, "Timeout after ${timeoutSeconds}s — still pending")
                                 withContext(Dispatchers.Main) { callback.onPaymentPending(orderId) }
                                 return@launch
                             }
@@ -89,9 +102,9 @@ class StatusPollingService(
                     delay(POLL_INTERVAL_MS)
                 } catch (e: Exception) {
                     attempts++
-                    Log.e(TAG, "Server/parsing error during polling: ${e.message}. Attempt $attempts/$MAX_ATTEMPTS")
-                    if (attempts >= MAX_ATTEMPTS) {
-                        Log.d(TAG, "Timeout after ${TIMEOUT_SECONDS}s — still pending")
+                    Log.e(TAG, "Server/parsing error during polling: ${e.message}. Attempt $attempts/$maxAttempts")
+                    if (attempts >= maxAttempts) {
+                        Log.d(TAG, "Timeout after ${timeoutSeconds}s — still pending")
                         withContext(Dispatchers.Main) { callback.onPaymentPending(orderId) }
                         return@launch
                     }

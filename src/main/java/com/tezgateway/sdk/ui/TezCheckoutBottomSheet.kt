@@ -51,6 +51,14 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         private const val LOGO_URL   = "https://tezgateway.com/logo.png"
         private const val SHIELD_URL = "https://tezgateway.com/common/img/logoshild.png"
 
+        /**
+         * Even if the user took so long to pay that the server's own auto-match
+         * window has already closed by the time checking starts, still give this
+         * many seconds for one honest check — a payment that just genuinely
+         * completed shouldn't show "Pending" in under this.
+         */
+        private const val MIN_AUTO_CHECK_SECONDS = 20
+
         fun newInstance(
             baseUrl: String,
             userToken: String,
@@ -91,6 +99,19 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     private var paymentLaunched  = false   // true after launching a UPI app intent
     private var resultDelivered  = false
     private var timerJob: Job?   = null
+
+    /** Wall-clock time the sheet started showing — anchor for [computeAutoCheckBudgetSeconds]. */
+    private var sheetShownAtMillis: Long = 0L
+
+    /**
+     * Poll budget (seconds) for the *current* checking session — read by both
+     * startElapsedTimer() (visual countdown) and startPolling() (actual network
+     * loop), so the two always agree. Defaults to the SDK's fixed constant;
+     * recomputed from the server's own remaining auto-match window right before
+     * the first genuine check of a payment attempt (see onResume() / the QR
+     * "I've Paid" button in setupUI()).
+     */
+    private var currentCheckBudgetSeconds: Int = StatusPollingService.TIMEOUT_SECONDS
 
     // ── Views ──────────────────────────────────────────────────────────
     private lateinit var paymentSection:  View
@@ -166,8 +187,28 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         pendingSettings    = null
         pendingCallback    = null
 
+        sheetShownAtMillis = System.currentTimeMillis()
+
         bindViews(view)
         setupUI(view)
+    }
+
+    /**
+     * How long the SDK should auto-check for THIS payment attempt, synced to the
+     * server's own remaining auto-match window instead of always using the fixed
+     * default — see settings.manualUtrRevealInSeconds (computed server-side from
+     * StatusCheckService.matchingWindowSeconds() + the order's real creation time).
+     *
+     * Falls back to the fixed default when the server doesn't send a value (Manual,
+     * any reference/order-id-based provider like HDFC/PhonePe, or an older backend).
+     * Floored at [MIN_AUTO_CHECK_SECONDS] so a slow payer whose window already
+     * closed by the time they finish paying still gets one honest check.
+     */
+    private fun computeAutoCheckBudgetSeconds(): Int {
+        val configuredAtFetch = settings.manualUtrRevealInSeconds
+            ?: return StatusPollingService.TIMEOUT_SECONDS
+        val elapsedSeconds = ((System.currentTimeMillis() - sheetShownAtMillis) / 1000).toInt()
+        return (configuredAtFetch - elapsedSeconds).coerceAtLeast(MIN_AUTO_CHECK_SECONDS)
     }
 
     private fun bindViews(v: View) {
@@ -334,6 +375,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     btnQrPaid.visibility = View.VISIBLE
                     // ── QR BUG FIX: tap "I've Paid" → directly start status polling ──
                     btnQrPaid.setOnClickListener {
+                        currentCheckBudgetSeconds = computeAutoCheckBudgetSeconds()
                         showCheckingState()
                         startPolling()
                     }
@@ -595,7 +637,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     private fun startElapsedTimer() {
         timerJob?.cancel()
         timerJob = lifecycleScope.launch(Dispatchers.Main) {
-            var remaining = StatusPollingService.TIMEOUT_SECONDS
+            var remaining = currentCheckBudgetSeconds
             while (remaining > 0 && isActive) {
                 statusTimer.text = formatCountdown(remaining)
                 // Last 10s — nudge the chip red, same "getting urgent" cue as the
@@ -778,7 +820,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 override fun onPaymentSuccess(orderId: String, utr: String) = handleResolvedStatus("SUCCESS", utr)
                 override fun onPaymentFailed(orderId: String, reason: String) = handleResolvedStatus("FAILURE", "")
                 override fun onPaymentPending(orderId: String) = handleResolvedStatus("", "")
-            }
+            },
+            timeoutSeconds = currentCheckBudgetSeconds
         )
         pollingService?.startPolling(lifecycleScope)
     }
@@ -789,6 +832,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         if (paymentLaunched && !resultDelivered) {
             paymentLaunched = false
             if (!settings.method.equals("Manual", ignoreCase = true)) {
+                currentCheckBudgetSeconds = computeAutoCheckBudgetSeconds()
                 showCheckingState()
                 startPolling()
             }
@@ -1462,7 +1506,12 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 if (!isAdded) return@withContext
                 
                 if (success) {
-                    // Success, transition to checking state and start polling
+                    // Success, transition to checking state and start polling.
+                    // Fixed budget here (not computeAutoCheckBudgetSeconds()) — this
+                    // check is for the exact-UTR match, which isn't time-window bound,
+                    // so it doesn't need to be synced to the server's auto-match window
+                    // the way the very first automatic check does.
+                    currentCheckBudgetSeconds = StatusPollingService.TIMEOUT_SECONDS
                     showCheckingState()
                     startPolling()
                 } else {
