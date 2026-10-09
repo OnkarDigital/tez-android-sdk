@@ -156,6 +156,11 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
      * app as an unresolved order even though the user never actually meant to
      * leave (and, worse, without the explicit-cancel flow that tells the server
      * to mark it FAILURE — see btnCancel's own click listener in setupUI()).
+     *
+     * Because it cannot be dragged, it must open fully expanded: left in the default
+     * collapsed (peek-height) state, everything below the fold was unreachable. A
+     * sheet taller than the screen is capped at the screen height and its middle
+     * section (tez_scroll_view, 0dp + weight 1 in every theme layout) scrolls instead.
      */
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         isCancelable = false
@@ -163,7 +168,13 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         dialog.setCanceledOnTouchOutside(false)
         (dialog as? BottomSheetDialog)?.setOnShowListener {
             val sheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-            sheet?.let { BottomSheetBehavior.from(it).isDraggable = false }
+            sheet?.let {
+                BottomSheetBehavior.from(it).apply {
+                    isDraggable   = false
+                    skipCollapsed = true
+                    state         = BottomSheetBehavior.STATE_EXPANDED
+                }
+            }
         }
         return dialog
     }
