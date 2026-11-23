@@ -7,7 +7,6 @@ import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 /**
  * Polls check_order.php after user returns from UPI app.
@@ -50,10 +49,8 @@ class StatusPollingService(
     private val maxAttempts: Int =
         (timeoutSeconds / (POLL_INTERVAL_MS / 1000)).toInt().coerceAtLeast(1)
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10,  TimeUnit.SECONDS)
-        .build()
+    private val client: OkHttpClient get() = TezHttp.client
+
 
     private var pollingJob: Job? = null
 
@@ -80,8 +77,9 @@ class StatusPollingService(
                             return@launch
                         }
                         "FAILURE" -> {
+                            val reason = failureReason(json)
                             withContext(Dispatchers.Main) {
-                                callback.onPaymentFailed(orderId, "Transaction failed")
+                                callback.onPaymentFailed(orderId, reason)
                             }
                             return@launch
                         }
@@ -133,7 +131,7 @@ class StatusPollingService(
             val result = json.optJSONObject("result")
             val status = result?.optString("txnStatus", "") ?: ""
             val utr = result?.optString("utr", "") ?: ""
-            OneShotResult(status, utr)
+            OneShotResult(status, utr, if (status == "FAILURE") failureReason(json) else "")
         } catch (e: Exception) {
             Log.e(TAG, "checkOnce() failed: ${e.message}")
             OneShotResult("", "")
@@ -141,9 +139,19 @@ class StatusPollingService(
     }
 
     /** Result of [checkOnce]. [status] is "SUCCESS" | "FAILURE" | "" (pending/unknown/error). */
-    data class OneShotResult(val status: String, val utr: String)
+    data class OneShotResult(val status: String, val utr: String, val message: String = "")
 
     // ── Private helpers ────────────────────────────────────────────────
+
+    /**
+     * Reason for a FAILURE: the server's own message when it says something specific
+     * (e.g. "Order not found"), otherwise the long-standing default "Transaction failed"
+     * — kept so merchants who compare against that string see no change.
+     */
+    private fun failureReason(json: JSONObject): String {
+        val msg = json.optString("message", "").trim()
+        return if (msg.isEmpty() || msg.equals("Transaction FAILURE", ignoreCase = true)) "Transaction failed" else msg
+    }
 
     private fun callCheckOrder(): JSONObject {
         val body = FormBody.Builder()
@@ -156,7 +164,7 @@ class StatusPollingService(
             .post(body)
             .build()
 
-        val responseBody = client.newCall(request).execute().body?.string() ?: "{}"
+        val responseBody = client.newCall(request).execute().use { it.body?.string() } ?: "{}"
         return JSONObject(responseBody)
     }
 }

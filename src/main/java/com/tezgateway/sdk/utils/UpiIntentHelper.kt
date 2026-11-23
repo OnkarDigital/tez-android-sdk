@@ -8,13 +8,13 @@ import com.tezgateway.sdk.models.PaymentData
 
 object UpiIntentHelper {
 
-    enum class UpiApp(val packageName: String) {
-        GOOGLE_PAY("com.google.android.apps.nbu.paisa.user"),
-        PHONEPE("com.phonepe.app"),
-        PAYTM("net.one97.paytm"),
-        BHIM("in.org.npci.upiapp"),
-        AMAZON_PAY("in.amazon.mShop.android.shopping"),
-        CRED("com.dreamplug.androidapp")
+    enum class UpiApp(val packageName: String, val displayName: String) {
+        GOOGLE_PAY("com.google.android.apps.nbu.paisa.user", "Google Pay"),
+        PHONEPE("com.phonepe.app", "PhonePe"),
+        PAYTM("net.one97.paytm", "Paytm"),
+        BHIM("in.org.npci.upiapp", "BHIM"),
+        AMAZON_PAY("in.amazon.mShop.android.shopping", "Amazon Pay"),
+        CRED("com.dreamplug.androidapp", "CRED")
     }
 
     /**

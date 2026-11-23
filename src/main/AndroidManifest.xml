@@ -22,11 +22,25 @@
     </queries>
 
     <application>
-        <!-- TezCheckoutBottomSheet (library Activity-like fragment host) -->
+        <!--
+            Transparent host for the checkout sheet. Own theme → works with any host
+            app theme. configChanges → rotation / dark-mode switch never restarts it,
+            so an in-progress payment is never lost.
+        -->
+        <activity
+            android:name="com.tezgateway.sdk.ui.TezCheckoutActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TezGateway.Checkout"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|locale|layoutDirection"
+            android:windowSoftInputMode="adjustResize" />
 
-        <!-- FileProvider for sharing QR image to GPay and other UPI apps -->
+        <!--
+            FileProvider for sharing the QR image to GPay. Uses the SDK's own subclass
+            (not androidx.core.content.FileProvider) so it can never be merged with —
+            and broken by — a FileProvider declared by the host app or another library.
+        -->
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name="com.tezgateway.sdk.utils.TezFileProvider"
             android:authorities="${applicationId}.tezgateway.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">

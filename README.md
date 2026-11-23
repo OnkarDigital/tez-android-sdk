@@ -12,6 +12,35 @@ A native Android SDK for integrating TezGateway UPI payment gateway — **no Web
 - 📱 **Smart App Detection** — only shows buttons for UPI apps installed on device
 - 🔄 **Auto Status Polling** — polls `check_order.php` when user returns from UPI app
 - ☕ **Java + Kotlin** — fully compatible with both languages
+- 🧩 **Zero setup** (1.1.0+) — works from any Activity (AppCompat, Flutter, Compose…) and any app theme; no FileProvider conflicts
+
+## What's new in 1.1.0
+
+- Checkout runs in the SDK's own transparent screen → any Activity + any theme works
+- Instant loader after `startPayment()`; double taps can't open two checkouts
+- Rotation / dark-mode switch no longer closes the checkout; the callback is always delivered exactly once
+- No crash when the app goes to background during the result animation
+- Google Pay works even when the server sends no `qr_image` (QR is generated locally, deleted afterwards)
+- SDK's own `TezFileProvider` — never clashes with your app's FileProvider
+- Pending result now offers **Check Again** + **Close**; `onPaymentPending` is sent when the user closes
+- Theme 1 amount card follows your header colour; friendlier error messages
+- UI polish (all 4 themes): buttons keep their real colours/borders (Material tint fix) with touch ripple,
+  no gaps between UPI buttons, no empty space above the result card, rounded sheet top, no fake drag
+  handle, labels never clip, larger small text, better UTR input (caps, no autocorrect, Done submits)
+- ✨ Delight: countdown ring while checking, animated ✓ with confetti + haptic on success, ✗ with
+  shake on failure, pulsing ⏳ on pending, tap the QR for a full-screen, full-brightness view
+  (all animations switch off automatically when the phone's "remove animations" setting is on)
+- `PaymentData.fromJson(serverJson, "₹500.00")` + `PaymentData.orderIdFromJson(serverJson)` — no manual field mapping
+- Java: `PaymentData` now has shorter constructors too (`@JvmOverloads`); the 9-value one still works
+
+```kotlin
+// responseBody = JSON your server got from create_order
+val paymentData = PaymentData.fromJson(responseBody, "₹500.00")
+val orderId     = PaymentData.orderIdFromJson(responseBody)
+TezGateway.startPayment(this, "YOUR_USER_TOKEN", orderId, paymentData, callback)
+```
+
+No code changes are needed when upgrading from 1.0.30 — only the version number.
 
 ---
 
@@ -21,7 +50,7 @@ A native Android SDK for integrating TezGateway UPI payment gateway — **no Web
 
 ```gradle
 dependencies {
-    implementation 'com.github.OnkarDigital:tez-android-sdk:1.0.25'
+    implementation 'com.github.OnkarDigital:tez-android-sdk:1.1.0'
 }
 ```
 
@@ -182,4 +211,4 @@ Configure your Webhook URL in the TezGateway merchant panel. When a payment sett
 
 ---
 
-*TezGateway Android SDK · 1.0.25*
+*TezGateway Android SDK · 1.1.0*

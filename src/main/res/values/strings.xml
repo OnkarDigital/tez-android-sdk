@@ -5,4 +5,5 @@
     <string name="tez_cancel">Cancel Payment</string>
     <string name="tez_scan_qr">Scan QR to Pay</string>
     <string name="tez_powered_by">Powered by TezGateway</string>
+    <string name="tez_loading_checkout">Loading secure checkout…</string>
 </resources>

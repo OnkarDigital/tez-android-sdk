@@ -1,5 +1,7 @@
 package com.tezgateway.sdk.models
 
+import org.json.JSONObject
+
 // ─────────────────────────────────────────────────────────────────
 // ORDER RESPONSE — from your server (which called create_order1.php)
 // ─────────────────────────────────────────────────────────────────
@@ -21,8 +23,12 @@ data class OrderResult(
 /**
  * Deep-links returned by create_order1.php.
  * Pass this to TezGateway.startPayment() after receiving it from your server.
+ *
+ * Easiest: `PaymentData.fromJson(serverResponseJson, "₹500.00")`.
+ * Java can also pass only the leading values it needs (@JvmOverloads) —
+ * the original 9-value constructor keeps working as before.
  */
-data class PaymentData(
+data class PaymentData @JvmOverloads constructor(
     val intPermit: String = "",
     val bhim_link: String = "",
     val phonepe_link: String = "",
@@ -32,7 +38,59 @@ data class PaymentData(
     val cred_link: String = "",
     val qr_image: String = "",
     val amount: String = ""
-)
+) {
+    companion object {
+        /**
+         * Builds PaymentData straight from your server's create_order response.
+         *
+         * Accepts any of these shapes:
+         *  - the full response   `{ "status": true, "result": { "orderId": …, "data": { … } } }`
+         *  - the `result` object `{ "orderId": …, "data": { … } }`
+         *  - the `data` object   `{ "bhim_link": …, "gpay_link": …, "qr_image": … }`
+         * Missing / null fields become "". [amount] is optional ("" hides the amount card).
+         *
+         * @throws org.json.JSONException if [json] is not valid JSON.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun fromJson(json: String, amount: String = ""): PaymentData =
+            fromJson(JSONObject(json), amount)
+
+        /** Same as [fromJson] (String) for an already-parsed [JSONObject]. */
+        @JvmStatic
+        @JvmOverloads
+        fun fromJson(json: JSONObject, amount: String = ""): PaymentData {
+            val data = json.optJSONObject("result")?.optJSONObject("data")
+                ?: json.optJSONObject("data")
+                ?: json
+
+            fun s(key: String): String =
+                if (data.isNull(key)) "" else data.optString(key, "")
+
+            return PaymentData(
+                intPermit      = s("intPermit"),
+                bhim_link      = s("bhim_link"),
+                phonepe_link   = s("phonepe_link"),
+                paytm_link     = s("paytm_link"),
+                gpay_link      = s("gpay_link"),
+                amazonpay_link = s("amazonpay_link"),
+                cred_link      = s("cred_link"),
+                qr_image       = s("qr_image"),
+                amount         = amount
+            )
+        }
+
+        /**
+         * The `orderId` from your server's create_order response (full response or
+         * `result` object). Returns "" if it isn't there.
+         */
+        @JvmStatic
+        fun orderIdFromJson(json: String): String {
+            val obj = JSONObject(json)
+            return (obj.optJSONObject("result") ?: obj).optString("orderId", "")
+        }
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────
 // STATUS RESPONSE — from check_order.php  (polled internally by SDK)

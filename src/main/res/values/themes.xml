@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Theme of the SDK's own transparent checkout Activity.
+        MaterialComponents so the checkout's Material buttons work no matter
+        which theme the host app uses.
+    -->
+    <style name="Theme.TezGateway.Checkout" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+
+        <!-- Neutral control colours: without these the Material defaults showed through
+             (purple #6200EE / teal #03DAC6 on the loader spinner, UTR cursor, ripples). -->
+        <item name="colorPrimary">#4B5563</item>
+        <item name="colorPrimaryVariant">#374151</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#4B5563</item>
+        <item name="colorSecondaryVariant">#374151</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorAccent">#4B5563</item>
+        <item name="colorControlActivated">#6B7280</item>
+        <item name="colorControlHighlight">#22000000</item>
+    </style>
+</resources>

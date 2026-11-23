@@ -1,6 +1,7 @@
 package com.tezgateway.sdk.ui
 
 import android.app.Dialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -8,6 +9,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,11 +20,14 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.tezgateway.sdk.R
+import com.tezgateway.sdk.TezSession
 import com.tezgateway.sdk.interfaces.TezPaymentCallback
 import com.tezgateway.sdk.models.CheckoutSettings
 import com.tezgateway.sdk.models.PaymentData
 import com.tezgateway.sdk.network.SettingsClient
 import com.tezgateway.sdk.network.StatusPollingService
+import com.tezgateway.sdk.network.TezHttp
+import com.tezgateway.sdk.utils.QrGenerator
 import com.tezgateway.sdk.utils.SdkVersion
 import com.tezgateway.sdk.utils.UpiIntentHelper
 import kotlinx.coroutines.*
@@ -44,9 +49,8 @@ import java.io.FileOutputStream
 class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     companion object {
-        private const val ARG_BASE_URL   = "base_url"
-        private const val ARG_USER_TOKEN = "user_token"
-        private const val ARG_ORDER_ID   = "order_id"
+        private const val TAG = "TezCheckout"
+        private const val GPAY_PACKAGE = "com.google.android.apps.nbu.paisa.user"
 
         private const val LOGO_URL   = "https://tezgateway.com/logo.png"
         private const val SHIELD_URL = "https://tezgateway.com/common/img/logoshild.png"
@@ -59,6 +63,11 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
          */
         private const val MIN_AUTO_CHECK_SECONDS = 20
 
+        /**
+         * Legacy entry (≤ 1.0.30 showed the sheet directly on the merchant's Activity).
+         * [com.tezgateway.sdk.TezGateway.startPayment] no longer uses it — it opens
+         * [TezCheckoutActivity] instead — but it still works for anyone calling it.
+         */
         fun newInstance(
             baseUrl: String,
             userToken: String,
@@ -67,22 +76,10 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             settings: CheckoutSettings,
             callback: TezPaymentCallback
         ): TezCheckoutBottomSheet {
-            pendingPaymentData = paymentData
-            pendingSettings    = settings
-            pendingCallback    = callback
-
-            return TezCheckoutBottomSheet().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_BASE_URL,   baseUrl)
-                    putString(ARG_USER_TOKEN, userToken)
-                    putString(ARG_ORDER_ID,   orderId)
-                }
-            }
+            TezSession.current = TezSession.Request(baseUrl, userToken, orderId, paymentData, callback)
+                .also { it.settings = settings }
+            return TezCheckoutBottomSheet()
         }
-
-        internal var pendingPaymentData: PaymentData?        = null
-        internal var pendingSettings:    CheckoutSettings?   = null
-        internal var pendingCallback:    TezPaymentCallback? = null
 
         internal var cachedLogo: Bitmap? = null
         internal var cachedShield: Bitmap? = null
@@ -97,8 +94,36 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     private var pollingService: StatusPollingService? = null
     private var paymentLaunched  = false   // true after launching a UPI app intent
+    /** True while a result card (success / failure / pending) is showing. */
     private var resultDelivered  = false
     private var timerJob: Job?   = null
+
+    /** Last resolved outcome ("SUCCESS" | "FAILURE" | "PENDING") — sent to the merchant by [deliverResult]. */
+    private var resolvedStatus: String? = null
+    private var resolvedUtr    = ""
+    private var resolvedReason = ""
+
+    /** Decoded server QR (or null) — decoded off the main thread, re-used for the GPay share. */
+    private var qrBitmap: Bitmap? = null
+    /** QR file shared with GPay — removed (and its permission revoked) once the checkout ends. */
+    private var sharedQrUri: Uri? = null
+
+    /** Timer chip colour from the theme — restored after the "last 10s" red nudge. */
+    private var timerDefaultColor: Int? = null
+
+    // ── Effects (W7–W11) ──
+    private var ring: TezCountdownRingView? = null
+    private var ringArcColor: Int = Color.GRAY
+    private var resultIcon: TezResultIconView? = null
+    private var logoPulse: android.animation.Animator? = null
+    private var pendingPulse: android.animation.Animator? = null
+    private var qrDialog: Dialog? = null
+    private var themeIdCurrent = 1
+    private var headerColorCurrent = Color.GRAY
+
+    /** Checking-card background/padding — removed while a result card shows (no card-in-card). */
+    private var checkingCardBg: android.graphics.drawable.Drawable? = null
+    private var checkingCardPadding: IntArray? = null
 
     /** Wall-clock time the sheet started showing — anchor for [computeAutoCheckBudgetSeconds]. */
     private var sheetShownAtMillis: Long = 0L
@@ -129,6 +154,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     private lateinit var brandingLogo:    ImageView
     private lateinit var spinnerLogo:     ImageView
     private var versionTag:       TextView? = null   // nullable: absent in an old host app's cached/overridden layout
+    private var spinnerWrap:      View? = null
 
     private lateinit var manualUtrSection: View
     private lateinit var manualUtrInput:   EditText
@@ -138,7 +164,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
-        val currentSettings = pendingSettings ?: CheckoutSettings()
+        val currentSettings = TezSession.current?.settings ?: CheckoutSettings()
         val themeId = if (currentSettings.theme in 1..4) currentSettings.theme else 1
         val layoutRes = when (themeId) {
             2 -> R.layout.bottomsheet_tez_checkout_theme2
@@ -166,6 +192,9 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         isCancelable = false
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.setCanceledOnTouchOutside(false)
+        // Keyboard shrinks the sheet (its middle scrolls) instead of covering the UTR box
+        @Suppress("DEPRECATION")
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         (dialog as? BottomSheetDialog)?.setOnShowListener {
             val sheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
             sheet?.let {
@@ -187,21 +216,53 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        paymentData = pendingPaymentData ?: run { dismiss(); return }
-        settings    = pendingSettings    ?: run { dismiss(); return }
-        callback    = pendingCallback    ?: run { dismiss(); return }
-        baseUrl     = arguments?.getString(ARG_BASE_URL)   ?: ""
-        userToken   = arguments?.getString(ARG_USER_TOKEN) ?: ""
-        orderId     = arguments?.getString(ARG_ORDER_ID)   ?: ""
-
-        pendingPaymentData = null
-        pendingSettings    = null
-        pendingCallback    = null
+        // Data lives in TezSession (not one-shot statics), so a re-created sheet still has it.
+        // Nothing there = the payment already ended (or the process was restarted) → just close.
+        val req = TezSession.current
+        val reqSettings = req?.settings
+        if (req == null || reqSettings == null || req.isFinished) {
+            safeDismiss()
+            return
+        }
+        paymentData = req.paymentData
+        settings    = reqSettings
+        callback    = req.callback          // once-only wrapper around the merchant's callback
+        baseUrl     = req.baseUrl
+        userToken   = req.userToken
+        orderId     = req.orderId
 
         sheetShownAtMillis = System.currentTimeMillis()
 
         bindViews(view)
         setupUI(view)
+    }
+
+    /** Dismiss that never throws, even if the app went to background (onSaveInstanceState done). */
+    private fun safeDismiss() {
+        if (isAdded) dismissAllowingStateLoss()
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        (activity as? TezCheckoutActivity)?.onSheetClosed()
+    }
+
+    override fun onDestroy() {
+        // A result already shown but not yet sent (e.g. screen closed during the success
+        // animation) still reaches the merchant — with the real status, not "pending".
+        deliverResult()
+        clearSharedQr()
+        super.onDestroy()
+    }
+
+    /** Sends [resolvedStatus] to the merchant (no-op if nothing resolved; once-only via TezSession). */
+    private fun deliverResult() {
+        if (!::callback.isInitialized) return
+        when (resolvedStatus) {
+            "SUCCESS" -> callback.onPaymentSuccess(orderId, resolvedUtr)
+            "FAILURE" -> callback.onPaymentFailed(orderId, resolvedReason.ifBlank { "Transaction failed" })
+            "PENDING" -> callback.onPaymentPending(orderId)
+        }
     }
 
     /**
@@ -238,6 +299,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         brandingLogo    = v.findViewById(R.id.tez_branding_logo)
         spinnerLogo     = v.findViewById(R.id.tez_spinner_logo)
         versionTag      = v.findViewById<TextView?>(R.id.tez_version_tag)
+        spinnerWrap     = v.findViewById(R.id.tez_spinner_wrap)
 
         manualUtrSection   = v.findViewById(R.id.tez_manual_utr_section)
         manualUtrInput     = v.findViewById(R.id.tez_manual_utr_input)
@@ -255,6 +317,32 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
         val themeId = if (settings.theme in 1..4) settings.theme else 1
         applyTheme(v, themeId, headerColor, bodyColor)
+        timerDefaultColor = statusTimer.currentTextColor
+
+        // The sheet can't be dragged (see onCreateDialog), so a drag handle only misleads
+        v.findViewById<View>(R.id.tez_drag_handle)?.visibility = View.GONE
+        roundSheetTop(v)
+
+        themeIdCurrent     = themeId
+        headerColorCurrent = headerColor
+        setupCountdownRing(themeId, headerColor)
+        setupResultIcon()
+
+        // UTR box: keyboard "Done" submits; keep the box above the keyboard
+        manualUtrInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                if (btnManualUtrSubmit.isEnabled) submitManualUtr()
+                true
+            } else false
+        }
+        manualUtrInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                v.findViewById<ScrollView>(R.id.tez_scroll_view)?.postDelayed({
+                    if (isAdded) v.findViewById<ScrollView>(R.id.tez_scroll_view)
+                        ?.smoothScrollTo(0, manualUtrSection.bottom)
+                }, 300)
+            }
+        }
 
         // ── Amount card ───────────────────────────────────────────────
         if (paymentData.amount.isBlank()) {
@@ -354,8 +442,18 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         ).any { id ->
             v.findViewById<View>(id)?.visibility == View.VISIBLE
         }
-        v.findViewById<View>(R.id.tez_no_upi_warning)?.visibility =
-            if (hasAnyInstalledUpi) View.GONE else View.VISIBLE
+        v.findViewById<TextView>(R.id.tez_no_upi_warning)?.apply {
+            visibility = if (hasAnyInstalledUpi) View.GONE else View.VISIBLE
+            // Only point to the QR when a QR will actually be shown
+            text = if (settings.show_qr && paymentData.qr_image.isNotBlank())
+                "No supported UPI app (Google Pay, PhonePe, Paytm…) found on this phone. Please scan the QR code below with any UPI app."
+            else
+                "No supported UPI app (Google Pay, PhonePe, Paytm…) found on this phone. Please install a UPI app to complete this payment."
+        }
+
+        // Grids keep a cell for every hidden (GONE) button → gaps between the visible ones.
+        // Take hidden buttons out and size the grid to what is left.
+        compactUpiGrid(v)
 
         // ── QR section ────────────────────────────────────────────────
         val qrSection    = v.findViewById<View>(R.id.tez_qr_section)
@@ -363,15 +461,26 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         val qrImageView  = v.findViewById<ImageView>(R.id.tez_qr_image)
         val btnQrPaid    = v.findViewById<Button>(R.id.btn_qr_paid)
 
-        if (settings.show_qr && paymentData.qr_image.isNotBlank()) {
-            try {
-                val base64Data = paymentData.qr_image.substringAfter("base64,")
-                val bytes  = Base64.decode(base64Data, Base64.DEFAULT)
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                qrImageView.setImageBitmap(bitmap)
+        // Hidden until the QR is decoded (off the main thread — no jank while the sheet opens)
+        qrSection.visibility = View.GONE
+        orDivider.visibility = View.GONE
 
+        if (paymentData.qr_image.isNotBlank()) {
+            lifecycleScope.launch {
+                val bitmap = withContext(Dispatchers.Default) { decodeServerQr() }
+                qrBitmap = bitmap
+                if (bitmap == null || !settings.show_qr || !isAdded) return@launch
+
+                qrImageView.setImageBitmap(bitmap)
                 qrSection.visibility = View.VISIBLE
                 orDivider.visibility = View.VISIBLE
+
+                // W11 — tap the QR → full-screen, max brightness (easy to scan from another phone)
+                qrImageView.contentDescription = "Payment QR code. Tap to enlarge."
+                qrImageView.setOnClickListener { showQrFullScreen(bitmap) }
+                v.findViewById<TextView>(R.id.tez_qr_description)?.let {
+                    it.text = "${it.text}  ·  Tap QR to enlarge"
+                }
 
                 // Tint the "I've Paid" button to match the merchant's header color
                 if (themeId == 1 || themeId == 2) {
@@ -391,13 +500,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                         startPolling()
                     }
                 }
-            } catch (e: Exception) {
-                qrSection.visibility = View.GONE
-                orDivider.visibility = View.GONE
             }
-        } else {
-            qrSection.visibility = View.GONE
-            orDivider.visibility = View.GONE
         }
 
         // ── Manual UTR section ─────────────────────────────────────────
@@ -425,15 +528,17 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         // ── Cancel button ─────────────────────────────────────────────
         btnCancel.setOnClickListener {
             if (resultDelivered) {
-                dismiss()
+                // "Close" on a result card — send that result now (failure / pending)
+                deliverResult()
+                safeDismiss()
                 return@setOnClickListener
             }
-            
+
             if (btnCancel.text.toString().equals("I'll Check Later", ignoreCase = true)) {
                 pollingService?.stopPolling()
                 timerJob?.cancel()
                 callback.onPaymentPending(orderId)
-                dismiss()
+                safeDismiss()
                 return@setOnClickListener
             }
 
@@ -452,7 +557,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     if (cancelled) {
                         // Server confirmed cancellation
                         callback.onPaymentFailed(orderId, "User cancelled")
-                        dismiss()
+                        safeDismiss()
                     } else {
                         // Cancel failed — order may already be settled, recheck status
                         btnCancel.isEnabled = true
@@ -465,7 +570,18 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         }
 
         // ── Check Status Now button ───────────────────────────────────
-        btnCheckStatus.setOnClickListener { retriggerStatusCheck() }
+        btnCheckStatus.setOnClickListener {
+            if (resultDelivered && resolvedStatus == "PENDING") {
+                // "Check Again" on the pending card → back to checking
+                resultDelivered = false
+                resolvedStatus  = null
+                currentCheckBudgetSeconds = computeAutoCheckBudgetSeconds()
+                showCheckingState()
+                startPolling()
+            } else {
+                retriggerStatusCheck()
+            }
+        }
 
         // ── Logos ─────────────────────────────────────────────────────
         loadImageInto(LOGO_URL,   brandingLogo)
@@ -508,6 +624,26 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+    /**
+     * Themes 1 & 3 lay UPI buttons out in a GridLayout, which still reserves a cell
+     * for GONE children. Remove the hidden ones and use at most as many columns as
+     * there are visible buttons (1 or 2 apps then fill the row instead of leaving holes).
+     */
+    private fun compactUpiGrid(v: View) {
+        val grid = v.findViewById<View>(R.id.btn_gpay)?.parent as? GridLayout ?: return
+        val maxColumns = grid.columnCount
+        for (i in grid.childCount - 1 downTo 0) {
+            val child = grid.getChildAt(i)
+            if (child.visibility == View.GONE) grid.removeViewAt(i)
+        }
+        val visible = grid.childCount
+        if (visible == 0) {
+            grid.visibility = View.GONE
+            return
+        }
+        grid.columnCount = minOf(maxColumns, visible).coerceAtLeast(1)
+    }
+
     /** Show/hide a UPI button and set its click listener. */
     private fun setupUpiButton(v: View, id: Int, enabled: Boolean, onClick: () -> Unit) {
         val btn = v.findViewById<Button>(id)
@@ -530,9 +666,9 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val bytes = okhttp3.OkHttpClient()
+                val bytes = TezHttp.client
                     .newCall(okhttp3.Request.Builder().url(url).build())
-                    .execute().body?.bytes() ?: return@launch
+                    .execute().use { it.body?.bytes() } ?: return@launch
                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 if (bitmap != null) {
                     if (url == LOGO_URL) cachedLogo = bitmap
@@ -545,38 +681,55 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
     // ── UPI app launch helpers ─────────────────────────────────────────
 
-    private fun shareQrToGpay() {
-        val qrBase64 = paymentData.qr_image
-        if (qrBase64.isBlank()) {
-            toast("QR code not available")
-            return
-        }
+    /** Decodes the server's Base64 `qr_image`; null if blank or invalid. Call off the main thread. */
+    private fun decodeServerQr(): Bitmap? = try {
+        val base64Data = paymentData.qr_image.substringAfter("base64,")
+        if (base64Data.isBlank()) null
+        else Base64.decode(base64Data, Base64.DEFAULT).let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+    } catch (e: Exception) {
+        Log.w(TAG, "Invalid qr_image: ${e.message}")
+        null
+    }
 
-        // Decode + write on IO thread to avoid ANR on slow devices
+    /**
+     * Google Pay accepts only a QR image (no deep link) — so share one:
+     * the server's QR if present, otherwise one generated locally from the UPI link.
+     */
+    private fun shareQrToGpay() {
+        val appCtx = requireContext().applicationContext
+
+        // Decode / generate + write on a background thread to avoid ANR on slow devices
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val base64Data = qrBase64.substringAfter("base64,")
-                val bytes  = Base64.decode(base64Data, Base64.DEFAULT)
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    ?: run { withContext(Dispatchers.Main) { toast("Failed to decode QR image") }; return@launch }
+                val bitmap = qrBitmap
+                    ?: decodeServerQr()
+                    ?: QrGenerator.upiUri(paymentData)?.let { QrGenerator.encode(it) }
+                    ?: run {
+                        withContext(Dispatchers.Main) {
+                            toast("Google Pay is not available for this payment. Please choose another app.")
+                        }
+                        return@launch
+                    }
+                qrBitmap = bitmap
 
                 // Delete any leftover tez_qr_*.png files from previous orders
-                requireContext().cacheDir
+                appCtx.cacheDir
                     .listFiles { f -> f.name.startsWith("tez_qr_") && f.name.endsWith(".png") }
                     ?.forEach { it.delete() }
 
                 // Unique filename per order — never serve a stale cached QR
-                val cacheFile = File(requireContext().cacheDir, "tez_qr_${orderId}.png")
+                val cacheFile = File(appCtx.cacheDir, "tez_qr_${orderId}.png")
                 FileOutputStream(cacheFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
 
-                val ctx       = requireContext()
+                val ctx       = appCtx
                 val authority = "${ctx.packageName}.tezgateway.fileprovider"
                 val uri       = FileProvider.getUriForFile(ctx, authority, cacheFile)
+                sharedQrUri   = uri
 
                 // Explicitly grant read permission to GPay's package — required on many
                 // Android versions even when FLAG_GRANT_READ_URI_PERMISSION is set on the intent
                 ctx.grantUriPermission(
-                    "com.google.android.apps.nbu.paisa.user",
+                    GPAY_PACKAGE,
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
@@ -588,36 +741,55 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     // propagate to the receiving app — without this GPay opens but can't
                     // read the image (blank / permission-denied crash inside GPay)
                     clipData = android.content.ClipData.newRawUri("QR Code", uri)
-                    setPackage("com.google.android.apps.nbu.paisa.user")
+                    setPackage(GPAY_PACKAGE)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     // No FLAG_ACTIVITY_NEW_TASK — Fragment.startActivity() uses the host
                     // activity's task, which is correct and avoids task-stack side-effects
                 }
 
                 withContext(Dispatchers.Main) {
+                    if (!isAdded) return@withContext
                     try {
                         startActivity(shareIntent)
                         paymentLaunched = true
                     } catch (e: android.content.ActivityNotFoundException) {
-                        toast("Google Pay not installed")
+                        toast("Google Pay is not installed on this phone.")
                     }
                 }
-            } catch (e: IllegalArgumentException) {
-                withContext(Dispatchers.Main) { toast("FileProvider error: ${e.message}") }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { toast("Could not open Google Pay: ${e.message}") }
+                // Technical detail goes to Logcat, the user gets a plain message
+                Log.e(TAG, "Could not share QR to Google Pay", e)
+                withContext(Dispatchers.Main) {
+                    toast("Could not open Google Pay. Please scan the QR or choose another app.")
+                }
             }
         }
     }
 
-    private fun toast(msg: String) =
-        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+    /** Deletes the QR file shared with GPay and revokes GPay's read access to it. */
+    private fun clearSharedQr() {
+        val ctx = context?.applicationContext ?: return
+        sharedQrUri?.let {
+            try { ctx.revokeUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+        }
+        sharedQrUri = null
+        try {
+            ctx.cacheDir
+                .listFiles { f -> f.name.startsWith("tez_qr_") && f.name.endsWith(".png") }
+                ?.forEach { it.delete() }
+        } catch (_: Exception) { }
+    }
+
+    private fun toast(msg: String) {
+        val ctx = context ?: return
+        Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
+    }
 
     private fun launchUpiApp(app: UpiIntentHelper.UpiApp) {
         if (UpiIntentHelper.startPaymentIntent(requireContext(), app, paymentData)) {
             paymentLaunched = true
         } else {
-            Toast.makeText(context, "${app.name} not available", Toast.LENGTH_SHORT).show()
+            toast("${app.displayName} could not be opened. Please choose another app.")
         }
     }
 
@@ -631,8 +803,19 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         paymentSection.visibility  = View.GONE
         checkingSection.visibility = View.VISIBLE
         resultCard.visibility      = View.GONE
-        statusSpinner.visibility   = View.VISIBLE
+        // Countdown ring replaces the plain spinner when available
+        statusSpinner.visibility   = if (ring != null) View.GONE else View.VISIBLE
+        spinnerWrap?.visibility    = View.VISIBLE
+        ring?.reset()
+        ring?.setArcColor(ringArcColor)
+        stopPulse(pendingPulse, resultIconText); pendingPulse = null
+        stopPulse(logoPulse, spinnerLogo)
+        logoPulse = pulse(spinnerLogo, to = 1.08f, periodMs = 900)
+        statusMessage.visibility   = View.VISIBLE
+        statusTimer.visibility     = View.VISIBLE
+        restoreCheckingCard()
         btnCheckStatus.visibility  = View.VISIBLE
+        (btnCheckStatus as? TextView)?.text = "Check Status Now"
         statusMessage.text         = "Verifying your payment..."
         btnCancel.text             = "I'll Check Later"
         startElapsedTimer()
@@ -647,15 +830,22 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
      */
     private fun startElapsedTimer() {
         timerJob?.cancel()
+        timerDefaultColor?.let { statusTimer.setTextColor(it) }   // undo a previous "last 10s" red
+        // Set the first value right now — otherwise the layout's placeholder text flashes for a frame
+        statusTimer.text = formatCountdown(currentCheckBudgetSeconds)
         timerJob = lifecycleScope.launch(Dispatchers.Main) {
+            val total = currentCheckBudgetSeconds.coerceAtLeast(1)
             var remaining = currentCheckBudgetSeconds
             while (remaining > 0 && isActive) {
                 statusTimer.text = formatCountdown(remaining)
+                // Ring glides to the next second's position over this second
+                ring?.animateTo((remaining - 1).toFloat() / total, 1000)
                 // Last 10s — nudge the chip red, same "getting urgent" cue as the
                 // web pay-page's QR countdown, so the user isn't caught off guard
                 // when the final check (and possibly a close) is about to happen.
                 if (remaining <= 10) {
                     statusTimer.setTextColor(0xFFEF4444.toInt())
+                    ring?.setArcColor(0xFFEF4444.toInt())
                 }
                 delay(1000)
                 remaining--
@@ -697,7 +887,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             val result = poller.checkOnce()
             withContext(Dispatchers.Main) {
                 if (!isAdded || resultDelivered) return@withContext
-                handleResolvedStatus(result.status, result.utr)
+                handleResolvedStatus(result.status, result.utr, result.message)
             }
         }
     }
@@ -707,9 +897,11 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
      * polling callback ([startPolling]) and the final check ([performFinalStatusCheck]),
      * so the two never show inconsistent results for the same outcome.
      */
-    private fun handleResolvedStatus(status: String, utr: String) {
+    private fun handleResolvedStatus(status: String, utr: String, reason: String = "") {
         when (status) {
             "SUCCESS" -> {
+                resolvedStatus = "SUCCESS"
+                resolvedUtr    = utr
                 showResult(
                     iconText    = "✓",
                     title       = "Payment Successful",
@@ -719,26 +911,31 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 )
                 btnCancel.visibility = View.GONE
                 lifecycleScope.launch {
-                    delay(1800)
-                    dismiss()
-                    callback.onPaymentSuccess(orderId, utr)
+                    delay(2200)   // long enough for the ✓ + confetti to play (W8)
+                    safeDismiss()
+                    deliverResult()
                 }
             }
             "FAILURE" -> {
+                resolvedStatus = "FAILURE"
+                resolvedReason = reason.ifBlank { "Transaction failed" }
                 showResult(
                     iconText    = "✗",
                     title       = "Payment Failed",
-                    subtitle    = "Transaction failed",
+                    subtitle    = resolvedReason,
                     cardBgColor = 0xFFFFEBEE.toInt(),
                     titleColor  = 0xFFC62828.toInt()
                 )
                 lifecycleScope.launch {
                     delay(2000)
-                    dismiss()
-                    callback.onPaymentFailed(orderId, "Transaction failed")
+                    safeDismiss()
+                    deliverResult()
                 }
             }
             else -> {
+                // Pending: not sent yet — the user can "Check Again" or "Close"
+                // (Close / screen exit sends onPaymentPending).
+                resolvedStatus = "PENDING"
                 showResult(
                     iconText    = "⏳",
                     title       = "Payment Pending",
@@ -746,7 +943,8 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                     cardBgColor = 0xFFFFF8E1.toInt(),
                     titleColor  = 0xFFE65100.toInt()
                 )
-                callback.onPaymentPending(orderId)
+                btnCheckStatus.visibility = View.VISIBLE
+                (btnCheckStatus as? TextView)?.text = "Check Again"
             }
         }
     }
@@ -758,10 +956,19 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         resultDelivered = true
         timerJob?.cancel()
 
+        // Hide the whole "checking" block (spinner frame + logo, message, timer chip) —
+        // hiding only the spinner left an empty 72dp frame, the logo and an empty pill.
         statusSpinner.visibility  = View.GONE
+        spinnerWrap?.visibility   = View.GONE
+        ring?.stop()
+        stopPulse(logoPulse, spinnerLogo); logoPulse = null
+        qrDialog?.dismiss()
         btnCheckStatus.visibility = View.GONE
         statusMessage.text        = ""
         statusTimer.text          = ""
+        statusMessage.visibility  = View.GONE
+        statusTimer.visibility    = View.GONE
+        flattenCheckingCard()
 
         resultIconText.text = iconText
         resultTitle.text    = title
@@ -803,8 +1010,12 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 resultSubtitle.setTextColor(0xFF8C7D70.toInt())
             }
             else -> {
-                // Theme 1: Classic
-                resultCard.setBackgroundColor(cardBgColor)
+                // Theme 1: Classic — keep the rounded card (setBackgroundColor made it square)
+                setRoundedBackground(
+                    resultCard, cardBgColor,
+                    strokeColor = (titleColor and 0x00FFFFFF) or 0x33000000,
+                    strokeWidthDp = 1f, cornerRadiusDp = 16f
+                )
                 resultTitle.setTextColor(titleColor)
                 resultSubtitle.setTextColor(0xFF555555.toInt())
             }
@@ -812,6 +1023,179 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
 
         resultCard.visibility = View.VISIBLE
         btnCancel.text = "Close"
+        playResultEffect(iconText)
+    }
+
+    // ── W7–W11 effects ─────────────────────────────────────────────────
+
+    /** W7 — swap the plain spinner for a countdown ring in the theme's accent colour. */
+    private fun setupCountdownRing(themeId: Int, headerColor: Int) {
+        val wrap = spinnerWrap as? FrameLayout ?: return
+        val ctx = context ?: return
+        val size = (72 * resources.displayMetrics.density).toInt()
+
+        // Very light header colour would vanish on light themes → use a darker shade of it
+        val accent = if (luminance(headerColor) > 0.8) mixWithBlack(headerColor, 0.45f) else headerColor
+        val (arc, track) = when (themeId) {
+            2    -> accent to 0x26FFFFFF
+            3    -> Color.BLACK to 0x1F000000
+            4    -> 0xFFD4AF37.toInt() to 0x33D4AF37
+            else -> accent to ((accent and 0x00FFFFFF) or 0x26000000)
+        }
+        ringArcColor = arc
+        ring = TezCountdownRingView(ctx).apply { setColors(arc, track) }
+        wrap.addView(ring, 0, FrameLayout.LayoutParams(size, size, android.view.Gravity.CENTER))
+        statusSpinner.visibility = View.GONE
+    }
+
+    /** W8/W9 — animated ✓ / ✗ icon, placed where the text icon sits in every theme. */
+    private fun setupResultIcon() {
+        val parent = resultIconText.parent as? ViewGroup ?: return
+        val ctx = context ?: return
+        val size = (68 * resources.displayMetrics.density).toInt()
+        val icon = TezResultIconView(ctx).apply { visibility = View.GONE }
+        val lp = LinearLayout.LayoutParams(size, size).apply {
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            bottomMargin = (10 * resources.displayMetrics.density).toInt()
+        }
+        parent.addView(icon, parent.indexOfChild(resultIconText), lp)
+        resultIcon = icon
+    }
+
+    /** Success: circle pops, ✓ draws, confetti + haptic. Failure: ✗ draws, card shakes. Pending: ⏳ pulses. */
+    private fun playResultEffect(iconText: String) {
+        stopPulse(pendingPulse, resultIconText); pendingPulse = null
+        val icon = resultIcon
+        val success = iconText == "✓"
+        val failure = iconText == "✗"
+
+        if (icon == null || (!success && !failure)) {
+            icon?.visibility = View.GONE
+            resultIconText.visibility = View.VISIBLE
+            if (!success && !failure) pendingPulse = pulse(resultIconText)   // W10
+            return
+        }
+
+        resultIconText.visibility = View.GONE
+        icon.visibility = View.VISIBLE
+        icon.kind = if (success) TezResultIconView.Kind.SUCCESS else TezResultIconView.Kind.FAILURE
+
+        when (themeIdCurrent) {
+            2 -> icon.setColors(if (success) 0xFF22C55E.toInt() else 0xFFEF4444.toInt(), Color.WHITE)
+            3 -> icon.setColors(if (success) 0xFF00C853.toInt() else 0xFFEF4444.toInt(), Color.BLACK, Color.BLACK)
+            4 -> icon.setColors(if (success) 0xFFD4AF37.toInt() else 0xFFEF4444.toInt(),
+                                if (success) 0xFF121212.toInt() else Color.WHITE)
+            else -> icon.setColors(if (success) 0xFF2E7D32.toInt() else 0xFFC62828.toInt(), Color.WHITE)
+        }
+
+        // post → the icon is laid out, so its position for the confetti origin is known
+        icon.post {
+            if (!isAdded) return@post
+            icon.play {
+                if (success) {
+                    hapticSuccess(icon)
+                    val root = view ?: return@play
+                    val (x, y) = positionIn(icon, root)
+                    ConfettiDrawable.burst(root, x + icon.width / 2f, y + icon.height / 2f, confettiColors())
+                } else {
+                    hapticReject(icon)
+                    shake(resultCard)
+                }
+            }
+        }
+    }
+
+    /** Top-left of [child] relative to [ancestor]. */
+    private fun positionIn(child: View, ancestor: View): Pair<Float, Float> {
+        val c = IntArray(2); val a = IntArray(2)
+        child.getLocationInWindow(c); ancestor.getLocationInWindow(a)
+        return (c[0] - a[0]).toFloat() to (c[1] - a[1]).toFloat()
+    }
+
+    private fun confettiColors(): IntArray = when (themeIdCurrent) {
+        2 -> intArrayOf(0xFF22D3EE.toInt(), 0xFFA78BFA.toInt(), 0xFFF472B6.toInt(), 0xFF4ADE80.toInt(), 0xFFFACC15.toInt())
+        3 -> intArrayOf(0xFF00C853.toInt(), 0xFFFFD600.toInt(), 0xFF2962FF.toInt(), 0xFFFF1744.toInt(), Color.BLACK)
+        4 -> intArrayOf(0xFFD4AF37.toInt(), 0xFFF5D67B.toInt(), 0xFFAA7C11.toInt(), 0xFFF5EAD6.toInt())
+        else -> intArrayOf(headerColorCurrent, 0xFF22C55E.toInt(), 0xFFFFC107.toInt(), 0xFF3B82F6.toInt(), 0xFFEC4899.toInt())
+    }
+
+    /** W11 — full-screen QR on a white page with the screen at full brightness. */
+    private fun showQrFullScreen(bitmap: Bitmap) {
+        val ctx = context ?: return
+        qrDialog?.dismiss()
+        val d = resources.displayMetrics.density
+        val dm = resources.displayMetrics
+        val side = (minOf(dm.widthPixels, dm.heightPixels) * 0.82f).toInt()
+        fun dp(v: Int) = (v * d).toInt()
+
+        val dialog = Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val page = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            setBackgroundColor(Color.WHITE)
+            setPadding(dp(24), dp(24), dp(24), dp(24))
+            setOnClickListener { dialog.dismiss() }
+        }
+        if (paymentData.amount.isNotBlank()) {
+            page.addView(TextView(ctx).apply {
+                text = paymentData.amount
+                textSize = 28f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(0xFF1A1A2E.toInt())
+                gravity = android.view.Gravity.CENTER
+            }, LinearLayout.LayoutParams(-2, -2).apply { bottomMargin = dp(18) })
+        }
+        page.addView(ImageView(ctx).apply {
+            // Nearest-neighbour scaling keeps the QR modules crisp when enlarged
+            setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bitmap).apply { isFilterBitmap = false })
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Payment QR code"
+        }, LinearLayout.LayoutParams(side, side))
+        page.addView(TextView(ctx).apply {
+            text = "Scan with any UPI app"
+            textSize = 15f
+            setTextColor(0xFF555555.toInt())
+            gravity = android.view.Gravity.CENTER
+        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(18) })
+        page.addView(TextView(ctx).apply {
+            text = "Close"
+            textSize = 16f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = android.view.Gravity.CENTER
+            setPadding(dp(36), dp(14), dp(36), dp(14))
+            setRoundedBackground(this, 0xFF1A1A2E.toInt(), cornerRadiusDp = 14f)
+            setOnClickListener { dialog.dismiss() }
+        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(28) })
+
+        dialog.setContentView(page)
+        dialog.window?.let { w ->
+            w.attributes = w.attributes.apply { screenBrightness = 1f }   // only while this page is open
+        }
+        dialog.setOnDismissListener { if (qrDialog === dialog) qrDialog = null }
+        qrDialog = dialog
+        dialog.show()
+    }
+
+    /** Result card is the only card while a result shows — drop the outer checking card. */
+    private fun flattenCheckingCard() {
+        if (checkingCardPadding == null) {
+            checkingCardBg = checkingSection.background
+            checkingCardPadding = intArrayOf(
+                checkingSection.paddingLeft, checkingSection.paddingTop,
+                checkingSection.paddingRight, checkingSection.paddingBottom
+            )
+        }
+        checkingSection.background = null
+        checkingSection.setPadding(0, 0, 0, 0)
+    }
+
+    private fun restoreCheckingCard() {
+        val p = checkingCardPadding ?: return
+        checkingSection.background = checkingCardBg
+        checkingSection.setPadding(p[0], p[1], p[2], p[3])
+        checkingCardPadding = null
+        checkingCardBg = null
     }
 
     private fun retriggerStatusCheck() {
@@ -829,7 +1213,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
             orderId   = orderId,
             callback  = object : TezPaymentCallback {
                 override fun onPaymentSuccess(orderId: String, utr: String) = handleResolvedStatus("SUCCESS", utr)
-                override fun onPaymentFailed(orderId: String, reason: String) = handleResolvedStatus("FAILURE", "")
+                override fun onPaymentFailed(orderId: String, reason: String) = handleResolvedStatus("FAILURE", "", reason)
                 override fun onPaymentPending(orderId: String) = handleResolvedStatus("", "")
             },
             timeoutSeconds = currentCheckBudgetSeconds
@@ -854,6 +1238,9 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         super.onDestroyView()
         pollingService?.stopPolling()
         timerJob?.cancel()
+        logoPulse?.cancel(); logoPulse = null
+        pendingPulse?.cancel(); pendingPulse = null
+        qrDialog?.dismiss(); qrDialog = null
     }
 
     private fun applyTheme(v: View, themeId: Int, headerColor: Int, bodyColor: Int) {
@@ -885,19 +1272,23 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 headerTitle?.setTextColor(Color.WHITE)
                 headerSubtitle?.setTextColor(0xCCFFFFFF.toInt())
                 
+                // Amount card follows the merchant's header colour (was always purple)
                 if (amountSection != null) {
                     setGradientBackground(
                         view = amountSection,
-                        startColor = 0xFFF7E6FF.toInt(),
-                        endColor = 0xFFFDFAFF.toInt(),
+                        startColor = mixWithWhite(headerColor, 0.90f),
+                        endColor = mixWithWhite(headerColor, 0.97f),
                         orientation = android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                        strokeColor = 0xFFDDB8FF.toInt(),
+                        strokeColor = mixWithWhite(headerColor, 0.70f),
                         strokeWidthDp = 1f,
                         cornerRadiusDp = 20f
                     )
                 }
-                amountLabelTitle?.setTextColor(0xFF9E00A0.toInt())
-                amountLabel?.setTextColor(0xFF1A0030.toInt())
+                // Very light header colour would be unreadable as text → use a dark shade of it
+                amountLabelTitle?.setTextColor(
+                    if (luminance(headerColor) > 0.75) mixWithBlack(headerColor, 0.55f) else headerColor
+                )
+                amountLabel?.setTextColor(0xFF1A1A2E.toInt())
                 payUpiTitle?.setTextColor(0xFF888888.toInt())
                 
                 if (trustRow != null) {
@@ -1459,8 +1850,60 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 setStroke(strokeWidthPx, strokeColor)
             }
         }
-        view.background = drawable
+        applyCustomBackground(view, drawable)
     }
+
+    /**
+     * Sets [drawable] as [view]'s background.
+     *
+     * For buttons (every `<Button>` here is inflated as a MaterialButton): MaterialButton
+     * re-applies its own backgroundTint onto a custom background (SRC_IN), which painted
+     * the whole shape in one colour — fill AND border — e.g. Cancel became a solid
+     * colorPrimary block and outlined buttons turned invisible. So the tint is cleared,
+     * and a ripple is added back since a custom background has no touch feedback.
+     */
+    private fun applyCustomBackground(view: View, drawable: android.graphics.drawable.Drawable) {
+        if (view is Button) {
+            view.background = android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x22000000), drawable, null
+            )
+            view.backgroundTintList = null
+        } else {
+            view.background = drawable
+        }
+    }
+
+    /**
+     * Rounded top corners for the whole sheet (header included) — clips the root to a
+     * rounded rect that extends past the bottom edge, so only the top corners round.
+     */
+    private fun roundSheetTop(root: View, radiusDp: Float = 20f) {
+        val r = radiusDp * resources.displayMetrics.density
+        root.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height + r.toInt(), r)
+            }
+        }
+        root.clipToOutline = true
+    }
+
+    /** [color] blended toward white by [ratio] (0 = unchanged, 1 = white). */
+    private fun mixWithWhite(color: Int, ratio: Float): Int = Color.rgb(
+        (Color.red(color)   + (255 - Color.red(color))   * ratio).toInt(),
+        (Color.green(color) + (255 - Color.green(color)) * ratio).toInt(),
+        (Color.blue(color)  + (255 - Color.blue(color))  * ratio).toInt()
+    )
+
+    /** [color] blended toward black by [ratio] (0 = unchanged, 1 = black). */
+    private fun mixWithBlack(color: Int, ratio: Float): Int = Color.rgb(
+        (Color.red(color)   * (1 - ratio)).toInt(),
+        (Color.green(color) * (1 - ratio)).toInt(),
+        (Color.blue(color)  * (1 - ratio)).toInt()
+    )
+
+    /** Perceived brightness 0..1. */
+    private fun luminance(color: Int): Double =
+        (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0
 
     private fun setGradientBackground(
         view: View,
@@ -1485,7 +1928,7 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
                 setStroke(strokeWidthPx, strokeColor)
             }
         }
-        view.background = drawable
+        applyCustomBackground(view, drawable)
     }
 
     private fun submitManualUtr() {

@@ -82,7 +82,7 @@
                     android:layout_height="wrap_content"
                     android:text="✓ "
                     android:textColor="#AAFFCC"
-                    android:textSize="9sp" />
+                    android:textSize="10sp" />
 
                 <TextView
                     android:id="@+id/tez_header_subtitle"
@@ -90,7 +90,7 @@
                     android:layout_height="wrap_content"
                     android:text="100% Secure  ·  Native UPI"
                     android:textColor="#FFFFFF"
-                    android:textSize="9.5sp"
+                    android:textSize="10.5sp"
                     android:alpha="0.75" />
             </LinearLayout>
         </LinearLayout>
@@ -108,7 +108,7 @@
                 android:layout_height="wrap_content"
                 android:text="Powered by"
                 android:textColor="#FFFFFF"
-                android:textSize="8sp"
+                android:textSize="9sp"
                 android:alpha="0.55"
                 android:gravity="end" />
 
@@ -134,7 +134,7 @@
                 android:text=""
                 android:textColor="#FFFFFF"
                 android:alpha="0.55"
-                android:textSize="7sp"
+                android:textSize="9sp"
                 android:gravity="end" />
         </LinearLayout>
     </LinearLayout>
@@ -227,7 +227,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="PAY VIA UPI APP"
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#888888"
                         android:letterSpacing="0.1"
                         android:textStyle="bold" />
@@ -249,6 +249,14 @@
                         android:layout_columnWeight="1"
                         android:layout_margin="4dp"
                         android:text="Google Pay"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
                         android:textSize="11sp"
                         android:textAllCaps="false"
                         android:textColor="#1a73e8"
@@ -271,6 +279,14 @@
                         android:layout_columnWeight="1"
                         android:layout_margin="4dp"
                         android:text="PhonePe"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
                         android:textSize="11sp"
                         android:textAllCaps="false"
                         android:textColor="#5f259f"
@@ -293,6 +309,14 @@
                         android:layout_columnWeight="1"
                         android:layout_margin="4dp"
                         android:text="Paytm"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
                         android:textSize="11sp"
                         android:textAllCaps="false"
                         android:textColor="#0078AA"
@@ -315,6 +339,14 @@
                         android:layout_columnWeight="1"
                         android:layout_margin="4dp"
                         android:text="BHIM UPI"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
                         android:textSize="11sp"
                         android:textAllCaps="false"
                         android:textColor="#00529a"
@@ -337,6 +369,14 @@
                         android:layout_columnWeight="1"
                         android:layout_margin="4dp"
                         android:text="Amazon Pay"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
                         android:textSize="11sp"
                         android:textAllCaps="false"
                         android:textColor="#C47600"
@@ -359,6 +399,14 @@
                         android:layout_columnWeight="1"
                         android:layout_margin="4dp"
                         android:text="CRED"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
                         android:textSize="11sp"
                         android:textAllCaps="false"
                         android:textColor="#1c1c1e"
@@ -404,7 +452,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="🔒  Secure"
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#2E7D32"
                         android:textStyle="bold" />
 
@@ -412,14 +460,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="  ·  "
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#A5D6A7" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="⚡ Fast"
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#2E7D32"
                         android:textStyle="bold" />
 
@@ -427,14 +475,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="  ·  "
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#A5D6A7" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="📱 Native UPI"
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#2E7D32"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -460,7 +508,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="  OR SCAN QR  "
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#AAAAAA"
                         android:letterSpacing="0.08" />
 
@@ -555,7 +603,8 @@
                             android:layout_height="45dp"
                             android:layout_weight="1"
                             android:hint="e.g. 123456789012"
-                            android:inputType="text"
+                            android:inputType="textCapCharacters|textNoSuggestions"
+                            android:imeOptions="actionDone"
                             android:maxLength="30"
                             android:textSize="13sp"
                             android:paddingStart="10dp"
@@ -645,7 +694,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="Checking... 0s"
+                    android:text=""
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="#AAAAAA"

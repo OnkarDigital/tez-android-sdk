@@ -21,8 +21,8 @@ android {
     defaultConfig {
         minSdk 21                   // Android 5.0+ (covers 98%+ of devices)
         targetSdk 34
-        versionCode 30
-        versionName "1.0.30"
+        versionCode 32
+        versionName "1.1.0"
         consumerProguardFiles "consumer-rules.pro"
     }
 
@@ -53,6 +53,10 @@ dependencies {
     // Material BottomSheet support
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.fragment:fragment-ktx:1.6.2'
+    implementation 'androidx.appcompat:appcompat:1.6.1'   // SDK's own checkout Activity
+
+    // Local QR generation (GPay needs a QR image when the server sends none)
+    implementation 'com.google.zxing:core:3.5.3'
 
     // Networking
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'

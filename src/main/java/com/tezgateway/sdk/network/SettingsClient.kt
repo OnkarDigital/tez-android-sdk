@@ -5,7 +5,6 @@ import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 /**
  * Fetches merchant UI configuration from get_checkout_settings.php.
@@ -13,10 +12,7 @@ import java.util.concurrent.TimeUnit
  */
 internal object SettingsClient {
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
+    private val client: OkHttpClient get() = TezHttp.client
 
     /**
      * Blocking call — must be called from a background thread (IO Dispatcher).
