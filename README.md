@@ -14,6 +14,13 @@ A native Android SDK for integrating TezGateway UPI payment gateway — **no Web
 - ☕ **Java + Kotlin** — fully compatible with both languages
 - 🧩 **Zero setup** (1.1.0+) — works from any Activity (AppCompat, Flutter, Compose…) and any app theme; no FileProvider conflicts
 
+## What's new in 1.1.2
+
+- `remove_branding` now hides only the "Powered by" text + TezGateway logo — the small SDK version /
+  "update available" tag stays visible
+
+No code changes are needed when upgrading from 1.1.1 — only the version number.
+
 ## What's new in 1.1.1
 
 - Correct message when UPI app buttons are off because the merchant's VIP plan is inactive
@@ -57,7 +64,7 @@ No code changes are needed when upgrading from 1.0.30 — only the version numbe
 
 ```gradle
 dependencies {
-    implementation 'com.github.OnkarDigital:tez-android-sdk:1.1.1'
+    implementation 'com.github.OnkarDigital:tez-android-sdk:1.1.2'
 }
 ```
 
@@ -218,4 +225,4 @@ Configure your Webhook URL in the TezGateway merchant panel. When a payment sett
 
 ---
 
-*TezGateway Android SDK · 1.1.1*
+*TezGateway Android SDK · 1.1.2*

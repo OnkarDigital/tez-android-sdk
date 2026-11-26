@@ -379,8 +379,12 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         } catch (e: Exception) { /* keep default */ }
 
         // ── Branding badge ────────────────────────────────────────────
-        v.findViewById<View>(R.id.tez_branding_badge).visibility =
-            if (settings.remove_branding) View.GONE else View.VISIBLE
+        // remove_branding hides only "Powered by" + logo — the badge itself stays,
+        // so the SDK version / "update available" tag inside it keeps showing.
+        val brandingVisibility = if (settings.remove_branding) View.GONE else View.VISIBLE
+        v.findViewById<View>(R.id.tez_branding_badge)?.visibility = View.VISIBLE
+        v.findViewById<View>(R.id.tez_powered_by_text)?.visibility = brandingVisibility
+        brandingLogo.visibility = brandingVisibility
 
         // ── News ticker ───────────────────────────────────────────────
         val tickerContainer = v.findViewById<View>(R.id.tez_news_ticker_container)
