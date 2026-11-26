@@ -64,7 +64,8 @@ internal object SettingsClient {
             method              = s.optString("method", ""),
             latestSdkVersion    = s.optString("latest_sdk_version", ""),
             manualUtrRevealInSeconds = if (s.isNull("manual_utr_reveal_in_seconds")) null
-                                       else s.optInt("manual_utr_reveal_in_seconds")
+                                       else s.optInt("manual_utr_reveal_in_seconds"),
+            isVip               = json.optBoolean("is_vip", true)
         )
     }
 

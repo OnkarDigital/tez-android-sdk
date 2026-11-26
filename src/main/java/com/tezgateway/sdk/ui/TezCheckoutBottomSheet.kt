@@ -445,10 +445,18 @@ class TezCheckoutBottomSheet : BottomSheetDialogFragment() {
         v.findViewById<TextView>(R.id.tez_no_upi_warning)?.apply {
             visibility = if (hasAnyInstalledUpi) View.GONE else View.VISIBLE
             // Only point to the QR when a QR will actually be shown
-            text = if (settings.show_qr && paymentData.qr_image.isNotBlank())
-                "No supported UPI app (Google Pay, PhonePe, Paytm…) found on this phone. Please scan the QR code below with any UPI app."
-            else
-                "No supported UPI app (Google Pay, PhonePe, Paytm…) found on this phone. Please install a UPI app to complete this payment."
+            val qrShown = settings.show_qr && paymentData.qr_image.isNotBlank()
+            text = when {
+                // Non-VIP: the server switched the app buttons off — the phone is fine
+                !settings.isVip && qrShown ->
+                    "UPI app payment is not enabled for this merchant. Please scan the QR code below with any UPI app."
+                !settings.isVip ->
+                    "UPI app payment is not enabled for this merchant. Please contact the merchant to complete this payment."
+                qrShown ->
+                    "No supported UPI app (Google Pay, PhonePe, Paytm…) found on this phone. Please scan the QR code below with any UPI app."
+                else ->
+                    "No supported UPI app (Google Pay, PhonePe, Paytm…) found on this phone. Please install a UPI app to complete this payment."
+            }
         }
 
         // Grids keep a cell for every hidden (GONE) button → gaps between the visible ones.

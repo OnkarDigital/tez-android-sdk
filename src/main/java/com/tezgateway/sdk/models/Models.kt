@@ -166,7 +166,14 @@ data class CheckoutSettings(
      * all (Manual, or any reference/order-id-based provider), in which case no
      * timed box is shown by the SDK (Manual keeps its own always-visible box).
      */
-    val manualUtrRevealInSeconds: Int? = null
+    val manualUtrRevealInSeconds: Int? = null,
+    /**
+     * Merchant's VIP plan state (top-level `is_vip` of get_checkout_settings.php).
+     * Without VIP the server turns every UPI app button off — the SDK uses this to
+     * say so instead of wrongly claiming "no UPI app found on this phone".
+     * Defaults to true so an older backend that doesn't send it keeps the old message.
+     */
+    val isVip: Boolean = true
 )
 
 // ─────────────────────────────────────────────────────────────────
